@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/services.dart';
 import 'package:projects/AddModal.dart';
-import 'package:projects/Model/password_model.dart';
+import 'package:projects/Model/password_fields.dart';
 import 'package:projects/constants.dart';
+import 'package:projects/SecurityRecomPage.dart';
+import 'package:projects/EditPasswordPage.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -27,22 +29,33 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  Map<int, bool> selectedPasswords = {};
+  static bool isInDeleteMode = false;
 
   @override
   Widget build(BuildContext context) {
     final String plusAsset = 'assets/plus.svg'; // #757575
-    final String editAsset = 'assets/edit.svg';
+    final String deleteAsset = 'assets/delete.svg';
     final String lockAsset = 'assets/lock.svg';
     final String copyAsset = 'assets/copy.svg';
+    final String editAsset = 'assets/edit.svg';
+    final String cancelAsset = 'assets/cancel.svg';
+
     double screenHeight = MediaQuery.of(context).size.height;
     return SafeArea(
       child: Scaffold(
         body: SingleChildScrollView(
           child: Column(
             children : [
-              profilePicAddEditIcons(plusAsset, editAsset, screenHeight),
+              profilePicAddDeleteIcons(plusAsset, deleteAsset,cancelAsset, screenHeight, context),
               searchBar("Search Password"),
               securityRecommendations(lockAsset, 10),
               Padding(
@@ -56,16 +69,22 @@ class HomePage extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                // height: 200,
-                child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: Constants.passwordData.length,
-                    itemBuilder: (context, index) {
-                      final password = Constants.passwordData[index];
-                      return passwordSection(password, context);
-                    }),
-              ),
+              ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: Constants.passwordData.length,
+                  itemBuilder: (context, index) {
+                    final password = Constants.passwordData[index];
+                    return passwordSection(password, context, index);
+                  }),
+              if (selectedPasswords.containsValue(true) && isInDeleteMode)
+                ElevatedButton(
+                  onPressed: () => deleteSelectedPasswords(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text("Delete Selected"),
+                ),
             ],
           ),
         ),
@@ -90,8 +109,8 @@ class HomePage extends StatelessWidget {
         )
     );
   }
-  
-  Widget profilePicAddEditIcons(String plusAsset, String editAsset, double screenHeight){
+
+  Widget profilePicAddDeleteIcons(String plusAsset, String deleteAsset, String cancelAsset, double screenHeight, BuildContext context){
     String getGreeting() {
       int hour = DateTime.now().hour;
       if (hour >= 3 && hour < 11) {
@@ -117,7 +136,7 @@ class HomePage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Hello, Cass",
+                      "Hello Cass",
                       style: TextStyle(
                         color: Colors.black87,
                         fontSize: 18,
@@ -139,10 +158,11 @@ class HomePage extends StatelessWidget {
           ),
           Row(
             children: [
-              _hoverButton(plusAsset, screenHeight, () {
-              }),
-              _hoverButton(editAsset, screenHeight, () {
-              }),
+              _hoverButton(plusAsset, screenHeight, () {}),
+              if (isInDeleteMode)
+                _hoverButton(cancelAsset, screenHeight, () {})
+              else
+                _hoverButton(deleteAsset, screenHeight, () {})
             ],
           ),
         ],
@@ -157,10 +177,14 @@ class HomePage extends StatelessWidget {
           onTapDown: (details) {},
           child: InkWell(
             borderRadius: BorderRadius.circular(35),
-            splashColor: Colors.black12,
+            splashColor: Colors.blue[200],
             onTap: () {
-              // navigation or action here
-            },
+              if (asset.contains('plus')){
+                bottomModal(context);
+              }
+              else if (asset.contains('delete') || asset.contains('cancel'))
+                {deletePasswords();}
+              },
             child: Container(
               decoration: BoxDecoration(
                 color: const Color.fromARGB(0, 186, 186, 186),
@@ -191,7 +215,7 @@ class HomePage extends StatelessWidget {
         decoration: InputDecoration(
             filled: true,
             contentPadding: EdgeInsets.all(13),
-            hintText: "Search Password",
+            hintText: hintText,
             hintStyle:TextStyle(
                 color: Color.fromARGB(255, 154, 153, 153),
                 fontWeight: FontWeight.w500
@@ -223,7 +247,10 @@ class HomePage extends StatelessWidget {
           borderRadius: BorderRadius.circular(35),
           splashColor: Colors.black12,
           onTap: () {
-            // navigation or action here
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SecurityRecomPage()),
+            );
           },
           child: Container(
             decoration: BoxDecoration(
@@ -280,145 +307,143 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget passwordSection(passwords password, BuildContext context) {
+  Widget passwordSection(passwords password, BuildContext context, int index) {
     double screenHeight = MediaQuery.of(context).size.height;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(25.0, 10, 25.0, 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // profile row
-          Row(
+      child: InkWell(
+        onTap: () {
+          // Navigate to EditPasswordPage
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EditPasswordPage(password: password),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(123, 220, 220, 220),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              logoBox(password, context),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(15.0, 0, 8, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      password.websiteName,
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 22, 22, 22),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+              // Profile row
+              Row(
+                children: [
+                  if (isInDeleteMode)
+                    Checkbox(
+                      value: selectedPasswords[index] ?? false,
+                      shape: const CircleBorder(),
+                      onChanged: (bool? value) {
+                        setState(() {
+                          selectedPasswords[index] = value ?? false;
+                        });
+                      },
                     ),
-                    Text(
-                      password.email,
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 39, 39, 39),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    )
-                  ],
-                ),
-              )
+                  logoBox(password),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(15.0, 0, 8, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          password.websiteName,
+                          style: const TextStyle(
+                            color: Color.fromARGB(255, 22, 22, 22),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          password.email,
+                          style: const TextStyle(
+                            color: Color.fromARGB(255, 39, 39, 39),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              _hoverButton('assets/copy.svg', screenHeight, () {}),
             ],
           ),
-          _hoverButton('assets/copy.svg', screenHeight, (){})
-        ],
+        ),
       ),
     );
   }
 
-  Widget logoBox(passwords password, BuildContext context) {
+
+
+  Widget logoBox(passwords password) {
     return Container(
         height: 60,
         width: 60,
         decoration: BoxDecoration(
             color: Color.fromARGB(255, 239, 239, 239),
-            borderRadius: BorderRadius.circular(20)),
+            borderRadius: BorderRadius.circular(30)),
         child: FractionallySizedBox(
             heightFactor: 0.5,
             widthFactor: 0.5,
             child: Image.network(password.logoUrl)));
   }
 
-  // Future<dynamic> bottomModal(BuildContext context) {
-  //   return showModalBottomSheet(
-  //       shape: RoundedRectangleBorder(
-  //         borderRadius: BorderRadius.circular(20.0),
-  //       ),
-  //       isScrollControlled: true,
-  //       context: context,
-  //       builder: (BuildContext bc) {
-  //         return Wrap(children: <Widget>[
-  //           Container(
-  //             child: Container(
-  //               decoration: new BoxDecoration(
-  //                   color: Colors
-  //                       .white, //forDialog ? Color(0xFF737373) : Colors.white,
-  //                   borderRadius: new BorderRadius.only(
-  //                       topLeft: const Radius.circular(25.0),
-  //                       topRight: const Radius.circular(25.0))),
-  //               child: AddModal(),
-  //             ),
-  //           )
-  //         ]);
-  //       });
-  // }
+  void deleteSelectedPasswords() {
+    setState(() {
+      // Get list of selected indexes
+      List<int> indexesToRemove = selectedPasswords.entries
+          .where((entry) => entry.value) // Filter selected ones
+          .map((entry) => entry.key) // Get their indexes
+          .toList();
 
-  // Widget bottomSheetWidgets(BuildContext context) {
-  //   double screenHeight = MediaQuery.of(context).size.height;
-  //   double screenWidth = MediaQuery.of(context).size.width;
-  //   return Padding(
-  //     padding: const EdgeInsets.fromLTRB(10.0, 10, 10, 10),
-  //     child: Column(
-  //       children: [
-  //         SizedBox(
-  //           height: 10,
-  //         ),
-  //         Align(
-  //           alignment: Alignment.topCenter,
-  //           child: Container(
-  //             width: screenWidth * 0.4,
-  //             height: 5,
-  //             decoration: BoxDecoration(
-  //                 color: Color.fromARGB(255, 156, 156, 156),
-  //                 borderRadius: BorderRadius.circular(20)),
-  //           ),
-  //         ),
-  //         SizedBox(
-  //           height: 20,
-  //         ),
-  //         searchBar("Search for a website or app"),
-  //         SizedBox(
-  //           height: 10,
-  //         ),
-  //         Row(
-  //           children: [
-  //             Container(
-  //               height: 60,
-  //               width: 130,
-  //               decoration: BoxDecoration(
-  //                   color:  Color.fromARGB(255, 239, 239, 239),
-  //                   borderRadius: BorderRadius.circular(20)),
-  //               child: FractionallySizedBox(
-  //                 heightFactor: 0.5,
-  //                 widthFactor: 0.5,
-  //                 child: Container(
-  //                   child: Row(
-  //                     children: [
-  //                       Icon(Icons.add),
-  //                       SizedBox(
-  //                         width: 4,
-  //                       ),
-  //                       Text(
-  //                         "Add",
-  //                         style: TextStyle(fontSize: 14),
-  //                       )
-  //                     ],
-  //                   ),
-  //                 ),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+      // Sort in descending order to avoid index shift issues
+      indexesToRemove.sort((a, b) => b.compareTo(a));
+
+      // Remove items from Constants.passwordData
+      for (int index in indexesToRemove) {
+        Constants.passwordData.removeAt(index);
+      }
+
+      // Clear selection map
+      selectedPasswords.clear();
+    });
+  }
+
+  Future<dynamic> bottomModal(BuildContext context) {
+    return showModalBottomSheet(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+        ),
+        isScrollControlled: true,
+        context: context,
+        builder: (BuildContext bc) {
+          return Wrap(children: <Widget>[
+            Container(
+              child: Container(
+                decoration: new BoxDecoration(
+                    color: Colors
+                        .white, //forDialog ? Color(0xFF737373) : Colors.white,
+                    borderRadius: new BorderRadius.only(
+                        topLeft: const Radius.circular(25.0),
+                        topRight: const Radius.circular(25.0))),
+                child: AddModal(),
+              ),
+            )
+          ]);
+        });
+  }
+
+  void deletePasswords() {
+    setState(() {
+      isInDeleteMode = !isInDeleteMode;
+    });
+  }
+
 }
-//------------------33:27----------------

@@ -2,14 +2,16 @@
 import 'dart:convert';
 
 class passwords {
-  final String websiteName;
-  final String email;
-  final String logoUrl;
+  String websiteName;
+  String email;
+  String logoUrl;
+  String password;
 
   passwords(
       this.websiteName,
       this.email,
       this.logoUrl,
+      this.password
       );
 
   passwords copyWith({
@@ -21,6 +23,7 @@ class passwords {
       websiteName ?? this.websiteName,
       email ?? this.email,
       logoUrl ?? this.logoUrl,
+      password ?? this.password
     );
   }
 
@@ -37,6 +40,7 @@ class passwords {
       map['websiteName'] as String,
       map['email'] as String,
       map['logoUrl'] as String,
+      map['password'] as String
     );
   }
 
