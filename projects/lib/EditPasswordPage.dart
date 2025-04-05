@@ -80,7 +80,11 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
                     backgroundColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
                   ),
                   onPressed: () {
-                    // TODO: Save updated password data
+                    setState(() { // save updated data
+                      widget.password.websiteName = websiteController.text.trim();
+                      widget.password.email = emailController.text.trim();
+                      widget.password.password = passwordController.text.trim();
+                    });
                     Navigator.pop(context);
                   },
                   child: const Text(

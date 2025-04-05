@@ -317,14 +317,18 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(25.0, 10, 25.0, 10),
       child: InkWell(
-        onTap: () {
+        onTap: () async {
           // Navigate to EditPasswordPage
-          Navigator.push(
+          final updated = await Navigator.push(
             context,
-            MaterialPageRoute(
+            MaterialPageRoute(        //give reference to password item
               builder: (context) => EditPasswordPage(password: password),
             ),
           );
+          
+          if (updated == true) {
+            setState(() {}); // rebuild to reflect changes
+          }
         },
         borderRadius: BorderRadius.circular(20),
         child: Container(
