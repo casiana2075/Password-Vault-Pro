@@ -23,7 +23,7 @@ class passwords {
       websiteName ?? this.websiteName,
       email ?? this.email,
       logoUrl ?? this.logoUrl,
-      password ?? this.password
+      password ?? password
     );
   }
 

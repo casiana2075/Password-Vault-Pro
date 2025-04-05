@@ -49,27 +49,30 @@ class AddModal extends StatelessWidget {
               formHeading("E-mail"),
               formTextField("Enter Email", Icons.email),
               formHeading("Password"),
-              PasswordField(hintText: "Enter Password", icon: Icons.lock_outline)
+              PasswordField(
+                  hintText: "Enter Password",
+                  icon: Icons.lock_outline
+              )
             ],
           ),
           SizedBox(
             height: 50,
           ),
-          Container(
+          SizedBox(
             height: screenHeight * 0.055,
             width: screenWidth * 0.5,
             child: ElevatedButton(
                 style: ButtonStyle(
-                    elevation: MaterialStatePropertyAll(5),
+                    elevation: WidgetStatePropertyAll(5),
                     shadowColor:
-                    MaterialStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
-                    shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
+                    shape: WidgetStateProperty.all<RoundedRectangleBorder>(
                         RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(35),
                             side:
                             BorderSide(color: Color.fromARGB(255, 55, 114, 255)))),
                     backgroundColor:
-                    MaterialStatePropertyAll(Color.fromARGB(255, 55, 114, 255))),
+                    WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255))),
                 onPressed: () {
                   Navigator.pop(context);
                 },

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:projects/Model/password_fields.dart';
+import 'package:projects/PasswordField.dart';
 
 class EditPasswordPage extends StatefulWidget {
   final passwords password;
 
-  const EditPasswordPage({Key? key, required this.password}) : super(key: key);
+  const EditPasswordPage({super.key, required this.password});
 
   @override
   _EditPasswordPageState createState() => _EditPasswordPageState();
@@ -33,43 +34,107 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           "Edit Password",
-          style:TextStyle(
+          style: TextStyle(
             color: Colors.black87,
             fontSize: 20,
             fontWeight: FontWeight.w500,
           ),
         ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: IconThemeData(color: Colors.black87),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: websiteController,
-              decoration: const InputDecoration(labelText: "Website Name"),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _formHeading("Website"),
+              _formTextField("Enter website name", Icons.language, websiteController),
+              _formHeading("Email"),
+              _formTextField("Enter email", Icons.email, emailController),
+              _formHeading("Password"),
+              PasswordField(
+                hintText : "Enter password", icon: Icons.lock_outline, controller: passwordController),
+              const SizedBox(height: 30),
+              SizedBox(
+                height: screenHeight * 0.055,
+                width: screenWidth * 0.5,
+                child: ElevatedButton(
+                  style: ButtonStyle(
+                    elevation: const WidgetStatePropertyAll(5),
+                    shadowColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
+                    shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(35),
+                        side: const BorderSide(color: Color.fromARGB(255, 55, 114, 255)),
+                      ),
+                    ),
+                    backgroundColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
+                  ),
+                  onPressed: () {
+                    // TODO: Save updated password data
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    "Save Changes",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _formTextField(String hintText, IconData icon, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          prefixIcon: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 5, 5, 5),
+            child: Icon(
+              icon,
+              color: const Color.fromARGB(255, 82, 101, 120),
             ),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: "Email"),
-            ),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: "Password"),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Handle update logic here (save changes)
-                Navigator.pop(context); // Go back to the previous page
-              },
-              child: const Text("Save Changes"),
-            ),
-          ],
+          ),
+          filled: true,
+          contentPadding: const EdgeInsets.all(16),
+          hintText: hintText,
+          hintStyle: const TextStyle(
+            color: Color.fromARGB(255, 82, 101, 120),
+            fontWeight: FontWeight.w500,
+          ),
+          fillColor: const Color.fromARGB(247, 232, 235, 237),
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(35),
+          ),
+        ),
+        style: const TextStyle(),
+      ),
+    );
+  }
+
+  Widget _formHeading(String text) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10.0, 15, 10, 5),
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
         ),
       ),
     );

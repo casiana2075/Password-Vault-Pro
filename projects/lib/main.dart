@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:projects/AddModal.dart';
@@ -158,11 +159,11 @@ class _HomePageState extends State<HomePage> {
           ),
           Row(
             children: [
-              _hoverButton(plusAsset, screenHeight, () {}),
+              _hoverButton(plusAsset, screenHeight, () => bottomModal(context)),
               if (isInDeleteMode)
-                _hoverButton(cancelAsset, screenHeight, () {})
+                _hoverButton(cancelAsset, screenHeight, () => deletePasswordsState() )
               else
-                _hoverButton(deleteAsset, screenHeight, () {})
+                _hoverButton(deleteAsset, screenHeight, ()=> deletePasswordsState())
             ],
           ),
         ],
@@ -170,7 +171,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _hoverButton(String asset, double screenHeight, VoidCallback onTap) {
+  Widget _hoverButton(String asset, double screenHeight, VoidCallback onTap, [String? password]) {
     return StatefulBuilder(
       builder: (context, setState) {
         return GestureDetector(
@@ -183,7 +184,10 @@ class _HomePageState extends State<HomePage> {
                 bottomModal(context);
               }
               else if (asset.contains('delete') || asset.contains('cancel'))
-                {deletePasswords();}
+                { deletePasswordsState(); }
+              else if (asset.contains('copy') && password != null) {
+                copyPassword(context, password);
+                }
               },
             child: Container(
               decoration: BoxDecoration(
@@ -372,15 +376,13 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              _hoverButton('assets/copy.svg', screenHeight, () {}),
+              _hoverButton('assets/copy.svg', screenHeight, () {}, password.password),
             ],
           ),
         ),
       ),
     );
   }
-
-
 
   Widget logoBox(passwords password) {
     return Container(
@@ -427,10 +429,10 @@ class _HomePageState extends State<HomePage> {
           return Wrap(children: <Widget>[
             Container(
               child: Container(
-                decoration: new BoxDecoration(
+                decoration: BoxDecoration(
                     color: Colors
                         .white, //forDialog ? Color(0xFF737373) : Colors.white,
-                    borderRadius: new BorderRadius.only(
+                    borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(25.0),
                         topRight: const Radius.circular(25.0))),
                 child: AddModal(),
@@ -440,9 +442,31 @@ class _HomePageState extends State<HomePage> {
         });
   }
 
-  void deletePasswords() {
+  void deletePasswordsState() {
     setState(() {
       isInDeleteMode = !isInDeleteMode;
+    });
+  }
+
+  void copyPassword(BuildContext context, String password) {
+    if (password.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Password is empty, nothing to copy."),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    Clipboard.setData(ClipboardData(text: password)).then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Password copied to clipboard ✅"),
+          duration: Duration(seconds: 2),
+        ),
+      );
     });
   }
 

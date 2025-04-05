@@ -5,27 +5,50 @@ import 'package:local_auth/local_auth.dart';
 class PasswordField extends StatefulWidget {
   final String hintText;
   final IconData icon;
+  final TextEditingController? controller;
 
-  const PasswordField({Key? key, required this.hintText, required this.icon}) : super(key: key);
+  const PasswordField({
+    super.key,
+    required this.hintText,
+    required this.icon,
+    this.controller,
+  });
 
   @override
   _PasswordFieldState createState() => _PasswordFieldState();
 }
 
 class _PasswordFieldState extends State<PasswordField> {
-  bool _obscureText = true; // Toggles password visibility
+  bool _obscureText = true;
   final LocalAuthentication auth = LocalAuthentication();
   Timer? _hidePasswordTimer;
   DateTime? _lastAuthTime;
+  late final TextEditingController _controller;
+  bool _readOnly = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = widget.controller ?? TextEditingController();
+
+    // If password exists, start in protected mode
+    if (_controller.text.trim().isNotEmpty) {
+      _readOnly = true;
+      _obscureText = true;
+    } else {
+      _readOnly = false;
+      _obscureText = false;
+    }
+  }
 
   Future<void> _authenticate() async {
     bool authenticated = false;
     try {
       authenticated = await auth.authenticate(
         localizedReason: "Authenticate to view password",
-        options: AuthenticationOptions(
+        options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: false, // Allows PIN/password fallback
+          biometricOnly: false,
         ),
       );
     } catch (e) {
@@ -35,14 +58,15 @@ class _PasswordFieldState extends State<PasswordField> {
     if (authenticated) {
       setState(() {
         _obscureText = false;
+        _readOnly = false;
         _lastAuthTime = DateTime.now();
       });
 
-      // timer to hide the password after 30 seconds
-      _hidePasswordTimer?.cancel(); // Cancel any existing timer
+      _hidePasswordTimer?.cancel();
       _hidePasswordTimer = Timer(const Duration(seconds: 30), () {
         setState(() {
           _obscureText = true;
+          _readOnly = true;
         });
       });
     }
@@ -51,6 +75,9 @@ class _PasswordFieldState extends State<PasswordField> {
   @override
   void dispose() {
     _hidePasswordTimer?.cancel();
+    if (widget.controller == null) {
+      _controller.dispose(); // only dispose internal controller
+    }
     super.dispose();
   }
 
@@ -59,7 +86,14 @@ class _PasswordFieldState extends State<PasswordField> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: TextFormField(
+        controller: _controller,
         obscureText: _obscureText,
+        readOnly: _readOnly,
+        onTap: () async {
+          if (_readOnly && _obscureText) {
+            await _authenticate();
+          }
+        },
         decoration: InputDecoration(
           prefixIcon: Padding(
             padding: const EdgeInsets.fromLTRB(20, 5, 5, 5),
@@ -75,11 +109,11 @@ class _PasswordFieldState extends State<PasswordField> {
             ),
             onPressed: () async {
               if (_obscureText) {
-                // if password is hidden, check if 30 seconds have passed
                 if (_lastAuthTime != null &&
                     DateTime.now().difference(_lastAuthTime!).inSeconds < 30) {
                   setState(() {
                     _obscureText = false;
+                    _readOnly = false;
                   });
                 } else {
                   await _authenticate();
@@ -87,21 +121,21 @@ class _PasswordFieldState extends State<PasswordField> {
               } else {
                 setState(() {
                   _obscureText = true;
+                  _readOnly = true;
                 });
               }
             },
           ),
           filled: true,
           contentPadding: const EdgeInsets.all(16),
-          hintText: widget.hintText,
+          hintText: _controller.text.isEmpty ? widget.hintText : null,
           hintStyle: const TextStyle(
-              color: Color.fromARGB(255, 82, 101, 120), fontWeight: FontWeight.w500),
+            color: Color.fromARGB(255, 82, 101, 120),
+            fontWeight: FontWeight.w500,
+          ),
           fillColor: const Color.fromARGB(247, 232, 235, 237),
           border: OutlineInputBorder(
-            borderSide: const BorderSide(
-              width: 0,
-              style: BorderStyle.none,
-            ),
+            borderSide: BorderSide.none,
             borderRadius: BorderRadius.circular(35),
           ),
         ),

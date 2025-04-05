@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class SecurityRecomPage extends StatelessWidget {
+  const SecurityRecomPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
