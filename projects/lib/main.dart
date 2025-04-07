@@ -4,10 +4,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:projects/AddModal.dart';
 import 'package:projects/Model/password_fields.dart';
+import 'package:projects/Model/password.dart';
 import 'package:projects/constants.dart';
 import 'package:projects/SecurityRecomPage.dart';
 import 'package:projects/EditPasswordPage.dart';
-
+import 'package:projects/services/api_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,7 +17,7 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  // root of the application
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -40,6 +41,27 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   Map<int, bool> selectedPasswords = {};
   static bool isInDeleteMode = false;
+
+  List<Password> _passwords = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadPasswords();
+  }
+
+  void loadPasswords() async {
+    try {
+      _passwords = await ApiService.fetchPasswords();
+    } catch (e) {
+      print('Error loading: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -325,7 +347,7 @@ class _HomePageState extends State<HomePage> {
               builder: (context) => EditPasswordPage(password: password),
             ),
           );
-          
+
           if (updated == true) {
             setState(() {}); // rebuild to reflect changes
           }
@@ -472,6 +494,5 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     });
-  }
-
+}
 }
