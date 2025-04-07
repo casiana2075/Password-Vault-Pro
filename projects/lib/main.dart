@@ -63,70 +63,55 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('My Passwords')),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : ListView.builder(
-        itemCount: _passwords.length,
-        itemBuilder: (context, index) {
-          return passwordSection(_passwords[index], context, index);
-        },
+    final String plusAsset = 'assets/plus.svg'; // #757575
+    final String deleteAsset = 'assets/delete.svg';
+    final String lockAsset = 'assets/lock.svg';
+    final String copyAsset = 'assets/copy.svg';
+    final String editAsset = 'assets/edit.svg';
+    final String cancelAsset = 'assets/cancel.svg';
+
+    double screenHeight = MediaQuery.of(context).size.height;
+    return SafeArea(
+      child: Scaffold(
+        body: SingleChildScrollView(
+          child: Column(
+            children : [
+              profilePicAddDeleteIcons(plusAsset, deleteAsset,cancelAsset, screenHeight, context),
+              searchBar("Search Password"),
+              securityRecommendations(lockAsset, 10),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
+                child: Row(
+                  children: [
+                    Text(
+                      "Passwords",
+                      style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _passwords.length,
+                  itemBuilder: (context, index) {
+                    final password = _passwords[index];
+                    return passwordSection(password, context, index);
+                  }),
+              if (selectedPasswords.containsValue(true) && isInDeleteMode)
+                ElevatedButton(
+                  onPressed: () => deleteSelectedPasswords(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text("Delete Selected"),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
-
-  @override
-  // Widget build(BuildContext context) {
-  //   final String plusAsset = 'assets/plus.svg'; // #757575
-  //   final String deleteAsset = 'assets/delete.svg';
-  //   final String lockAsset = 'assets/lock.svg';
-  //   final String copyAsset = 'assets/copy.svg';
-  //   final String editAsset = 'assets/edit.svg';
-  //   final String cancelAsset = 'assets/cancel.svg';
-  //
-  //   double screenHeight = MediaQuery.of(context).size.height;
-  //   return SafeArea(
-  //     child: Scaffold(
-  //       body: SingleChildScrollView(
-  //         child: Column(
-  //           children : [
-  //             profilePicAddDeleteIcons(plusAsset, deleteAsset,cancelAsset, screenHeight, context),
-  //             searchBar("Search Password"),
-  //             securityRecommendations(lockAsset, 10),
-  //             Padding(
-  //               padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
-  //               child: Row(
-  //                 children: [
-  //                   Text(
-  //                     "Passwords",
-  //                     style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
-  //                   ),
-  //                 ],
-  //               ),
-  //             ),
-  //             ListView.builder(
-  //                 shrinkWrap: true,
-  //                 itemCount: Constants.passwordData.length,
-  //                 itemBuilder: (context, index) {
-  //                   final password = Constants.passwordData[index];
-  //                   return passwordSection(password, context, index);
-  //                 }),
-  //             if (selectedPasswords.containsValue(true) && isInDeleteMode)
-  //               ElevatedButton(
-  //                 onPressed: () => deleteSelectedPasswords(),
-  //                 style: ElevatedButton.styleFrom(
-  //                   backgroundColor: Colors.red,
-  //                   foregroundColor: Colors.white,
-  //                 ),
-  //                 child: Text("Delete Selected"),
-  //               ),
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget circleAvatarRound(){
     return CircleAvatar(
@@ -380,11 +365,11 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   if (isInDeleteMode)
                     Checkbox(
-                      value: selectedPasswords[index] ?? false,
+                      value: selectedPasswords[password.id] ?? false,
                       shape: const CircleBorder(),
-                      onChanged: (bool? value) {
+                      onChanged: (value) {
                         setState(() {
-                          selectedPasswords[index] = value ?? false;
+                          selectedPasswords[password.id] = value ?? false;
                         });
                       },
                     ),
@@ -431,31 +416,20 @@ class _HomePageState extends State<HomePage> {
             color: Color.fromARGB(255, 239, 239, 239),
             borderRadius: BorderRadius.circular(30)),
         child: FractionallySizedBox(
-            heightFactor: 0.5,
-            widthFactor: 0.5,
+            heightFactor: 0.6,
+            widthFactor: 0.6,
             child: Image.network(password.logoUrl)));
   }
 
   void deleteSelectedPasswords() {
     setState(() {
-      // Get list of selected indexes
-      List<int> indexesToRemove = selectedPasswords.entries
-          .where((entry) => entry.value) // Filter selected ones
-          .map((entry) => entry.key) // Get their indexes
-          .toList();
-
-      // Sort in descending order to avoid index shift issues
-      indexesToRemove.sort((a, b) => b.compareTo(a));
-
-      // Remove items from Constants.passwordData
-      for (int index in indexesToRemove) {
-        // Constants.passwordData.removeAt(index);
-      }
-
-      // Clear selection map
+      _passwords.removeWhere((password) => selectedPasswords[password.id] == true);
       selectedPasswords.clear();
+      isInDeleteMode = false;
     });
   }
+
+
 
   Future<dynamic> bottomModal(BuildContext context) {
     return showModalBottomSheet(
