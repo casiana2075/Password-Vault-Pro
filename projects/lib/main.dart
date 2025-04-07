@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:projects/AddModal.dart';
-import 'package:projects/Model/password_fields.dart';
 import 'package:projects/Model/password.dart';
-import 'package:projects/constants.dart';
 import 'package:projects/SecurityRecomPage.dart';
 import 'package:projects/EditPasswordPage.dart';
 import 'package:projects/services/api_service.dart';
@@ -65,55 +63,70 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final String plusAsset = 'assets/plus.svg'; // #757575
-    final String deleteAsset = 'assets/delete.svg';
-    final String lockAsset = 'assets/lock.svg';
-    final String copyAsset = 'assets/copy.svg';
-    final String editAsset = 'assets/edit.svg';
-    final String cancelAsset = 'assets/cancel.svg';
-
-    double screenHeight = MediaQuery.of(context).size.height;
-    return SafeArea(
-      child: Scaffold(
-        body: SingleChildScrollView(
-          child: Column(
-            children : [
-              profilePicAddDeleteIcons(plusAsset, deleteAsset,cancelAsset, screenHeight, context),
-              searchBar("Search Password"),
-              securityRecommendations(lockAsset, 10),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
-                child: Row(
-                  children: [
-                    Text(
-                      "Passwords",
-                      style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-              ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: Constants.passwordData.length,
-                  itemBuilder: (context, index) {
-                    final password = Constants.passwordData[index];
-                    return passwordSection(password, context, index);
-                  }),
-              if (selectedPasswords.containsValue(true) && isInDeleteMode)
-                ElevatedButton(
-                  onPressed: () => deleteSelectedPasswords(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text("Delete Selected"),
-                ),
-            ],
-          ),
-        ),
+    return Scaffold(
+      appBar: AppBar(title: Text('My Passwords')),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : ListView.builder(
+        itemCount: _passwords.length,
+        itemBuilder: (context, index) {
+          return passwordSection(_passwords[index], context, index);
+        },
       ),
     );
   }
+
+  @override
+  // Widget build(BuildContext context) {
+  //   final String plusAsset = 'assets/plus.svg'; // #757575
+  //   final String deleteAsset = 'assets/delete.svg';
+  //   final String lockAsset = 'assets/lock.svg';
+  //   final String copyAsset = 'assets/copy.svg';
+  //   final String editAsset = 'assets/edit.svg';
+  //   final String cancelAsset = 'assets/cancel.svg';
+  //
+  //   double screenHeight = MediaQuery.of(context).size.height;
+  //   return SafeArea(
+  //     child: Scaffold(
+  //       body: SingleChildScrollView(
+  //         child: Column(
+  //           children : [
+  //             profilePicAddDeleteIcons(plusAsset, deleteAsset,cancelAsset, screenHeight, context),
+  //             searchBar("Search Password"),
+  //             securityRecommendations(lockAsset, 10),
+  //             Padding(
+  //               padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
+  //               child: Row(
+  //                 children: [
+  //                   Text(
+  //                     "Passwords",
+  //                     style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //             ListView.builder(
+  //                 shrinkWrap: true,
+  //                 itemCount: Constants.passwordData.length,
+  //                 itemBuilder: (context, index) {
+  //                   final password = Constants.passwordData[index];
+  //                   return passwordSection(password, context, index);
+  //                 }),
+  //             if (selectedPasswords.containsValue(true) && isInDeleteMode)
+  //               ElevatedButton(
+  //                 onPressed: () => deleteSelectedPasswords(),
+  //                 style: ElevatedButton.styleFrom(
+  //                   backgroundColor: Colors.red,
+  //                   foregroundColor: Colors.white,
+  //                 ),
+  //                 child: Text("Delete Selected"),
+  //               ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget circleAvatarRound(){
     return CircleAvatar(
@@ -333,7 +346,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget passwordSection(passwords password, BuildContext context, int index) {
+  Widget passwordSection(Password password, BuildContext context, int index) {
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Padding(
@@ -382,7 +395,7 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          password.websiteName,
+                          password.site,
                           style: const TextStyle(
                             color: Color.fromARGB(255, 22, 22, 22),
                             fontSize: 14,
@@ -390,7 +403,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         Text(
-                          password.email,
+                          password.username,
                           style: const TextStyle(
                             color: Color.fromARGB(255, 39, 39, 39),
                             fontSize: 12,
@@ -410,7 +423,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget logoBox(passwords password) {
+  Widget logoBox(Password password) {
     return Container(
         height: 60,
         width: 60,
@@ -436,7 +449,7 @@ class _HomePageState extends State<HomePage> {
 
       // Remove items from Constants.passwordData
       for (int index in indexesToRemove) {
-        Constants.passwordData.removeAt(index);
+        // Constants.passwordData.removeAt(index);
       }
 
       // Clear selection map

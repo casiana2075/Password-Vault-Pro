@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:projects/Model/password_fields.dart';
+import 'package:projects/Model/password.dart';
 import 'package:projects/PasswordField.dart';
 
 class EditPasswordPage extends StatefulWidget {
-  final passwords password;
+  final Password password;
 
   const EditPasswordPage({super.key, required this.password});
 
@@ -19,8 +19,8 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
   @override
   void initState() {
     super.initState();
-    websiteController = TextEditingController(text: widget.password.websiteName);
-    emailController = TextEditingController(text: widget.password.email);
+    websiteController = TextEditingController(text: widget.password.site);
+    emailController = TextEditingController(text: widget.password.username);
     passwordController = TextEditingController(text: widget.password.password);
   }
 
@@ -81,9 +81,7 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
                   ),
                   onPressed: () {
                     setState(() { // save updated data
-                      widget.password.websiteName = websiteController.text.trim();
-                      widget.password.email = emailController.text.trim();
-                      widget.password.password = passwordController.text.trim();
+                      //save logic here!!!!!
                     });
                     Navigator.pop(context);
                   },
