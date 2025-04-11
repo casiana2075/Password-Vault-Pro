@@ -15,4 +15,37 @@ class ApiService {
       throw Exception('Failed to load passwords');
     }
   }
+
+  static Future<bool> deletePassword(int id) async {
+    final url = Uri.parse('$baseUrl/passwords/$id');
+    final response = await http.delete(url);
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      print('Failed to delete: ${response.statusCode}');
+      return false;
+    }
+  }
+
+  static Future<Password?> addPassword(String site, String username, String password) async {
+    final url = Uri.parse('$baseUrl/passwords');
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "site": site,
+        "username": username,
+        "password": password,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return Password.fromJson(jsonDecode(response.body));
+    } else {
+      print('Add failed: ${response.body}');
+      return null;
+    }
+  }
+
 }

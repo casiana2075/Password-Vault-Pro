@@ -16,4 +16,33 @@ app.get('/passwords', async (req, res) => {
   }
 });
 
+app.delete('/passwords/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM passwords WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Password not found' });
+    }
+    res.json({ message: 'Password deleted successfully' });
+  } catch (err) {
+    console.error('DB Delete Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/passwords', async (req, res) => {
+  const { site, username, password, logoURL } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO passwords (site, username, password, logoURL) VALUES ($1, $2, $3, $4) RETURNING *',
+      [site, username, password, logoURL]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('DB Insert Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.listen(3000, () => console.log('API running at http://localhost:3000'));

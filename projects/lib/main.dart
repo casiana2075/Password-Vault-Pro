@@ -49,7 +49,7 @@ class _HomePageState extends State<HomePage> {
     loadPasswords();
   }
 
-  void loadPasswords() async {
+  Future<void> loadPasswords() async {
     try {
       _passwords = await ApiService.fetchPasswords();
     } catch (e) {
@@ -90,13 +90,29 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _passwords.length,
-                  itemBuilder: (context, index) {
-                    final password = _passwords[index];
-                    return passwordSection(password, context, index);
-                  }),
+              _passwords.isEmpty
+                  ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Text(
+                    "🔐 No passwords stored yet!",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              )
+                  : ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(), // optional
+                itemCount: _passwords.length,
+                itemBuilder: (context, index) {
+                  final password = _passwords[index];
+                  return passwordSection(password, context, index);
+                },
+              ),
               if (selectedPasswords.containsValue(true) && isInDeleteMode)
                 ElevatedButton(
                   onPressed: () => deleteSelectedPasswords(),
@@ -338,7 +354,7 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.fromLTRB(25.0, 10, 25.0, 10),
       child: InkWell(
         onTap: () async {
-          // Navigate to EditPasswordPage
+          // navigate to EditPasswordPage
           final updated = await Navigator.push(
             context,
             MaterialPageRoute(        //give reference to password item
@@ -347,7 +363,10 @@ class _HomePageState extends State<HomePage> {
           );
 
           if (updated == true) {
-            setState(() {}); // rebuild to reflect changes
+            await loadPasswords(); // re-fetch from the database
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Password updated or deleted")),
+            );
           }
         },
         borderRadius: BorderRadius.circular(20),
@@ -421,14 +440,60 @@ class _HomePageState extends State<HomePage> {
             child: Image.network(password.logoUrl)));
   }
 
-  void deleteSelectedPasswords() {
+  void deleteSelectedPasswords() async {
+    List<int> idsToDelete = selectedPasswords.entries
+        .where((entry) => entry.value == true)
+        .map((entry) => entry.key)
+        .toList();
+
+    // confirm deletion
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Deletion'),
+          content: Text('Are you sure you want to delete ${idsToDelete.length} selected password(s)?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    // Delete from DB
+    for (int id in idsToDelete) {
+      final success = await ApiService.deletePassword(id);
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to delete item with id: $id")),
+        );
+      }
+    }
+
+    // refresh homepage
     setState(() {
-      _passwords.removeWhere((password) => selectedPasswords[password.id] == true);
+      loadPasswords();
       selectedPasswords.clear();
       isInDeleteMode = false;
     });
-  }
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Deleted ${idsToDelete.length} password(s)")),
+    );
+  }
 
 
   Future<dynamic> bottomModal(BuildContext context) {
@@ -483,3 +548,5 @@ class _HomePageState extends State<HomePage> {
     });
 }
 }
+
+//acum adauga delete si in http si adauga si edit/add cu baza de date

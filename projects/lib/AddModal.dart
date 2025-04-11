@@ -38,16 +38,14 @@ class AddModal extends StatelessWidget {
           SizedBox(
             height: 30,
           ),
-          searchText("Search for a website or app"),
+          searchText("Search for a website"),
           SizedBox(
             height: 10,
           ),
           Column(
             children: [
-              formHeading("Username"),
-              formTextField("Enter Username", Icons.person),
-              formHeading("E-mail"),
-              formTextField("Enter Email", Icons.email),
+              formHeading("Username / E-mail"),
+              formTextField("Enter Username or E-mail", Icons.alternate_email),
               formHeading("Password"),
               PasswordField(
                   hintText: "Enter Password",

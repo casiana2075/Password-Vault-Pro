@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projects/Model/password.dart';
 import 'package:projects/PasswordField.dart';
+import 'package:projects/services/api_service.dart';
 
 class EditPasswordPage extends StatefulWidget {
   final Password password;
@@ -63,34 +64,90 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
               _formHeading("Password"),
               PasswordField(
                 hintText : "Enter password", icon: Icons.lock_outline, controller: passwordController),
-              const SizedBox(height: 30),
               SizedBox(
-                height: screenHeight * 0.055,
-                width: screenWidth * 0.5,
-                child: ElevatedButton(
-                  style: ButtonStyle(
-                    elevation: const WidgetStatePropertyAll(5),
-                    shadowColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
-                    shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(35),
-                        side: const BorderSide(color: Color.fromARGB(255, 55, 114, 255)),
-                      ),
+                height: 50,
+              ),
+              ElevatedButton(
+                style: ButtonStyle(
+                  elevation: const WidgetStatePropertyAll(5),
+                  shadowColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
+                  shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(35),
+                      side: const BorderSide(color: Color.fromARGB(255, 55, 114, 255)),
                     ),
-                    backgroundColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
                   ),
-                  onPressed: () {
-                    setState(() { // save updated data
-                      //save logic here!!!!!
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: const Text(
-                    "Save Changes",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                  ),
+                  backgroundColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
                 ),
-              )
+                onPressed: () {
+                  setState(() { // save updated data
+                    //save logic here!!!!!
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  "Save Changes",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              ),
+              SizedBox(
+                height: 10,
+              ),
+              ElevatedButton(
+                style: ButtonStyle(
+                  elevation: const WidgetStatePropertyAll(5),
+                  shadowColor: const WidgetStatePropertyAll(Color.fromARGB(255, 255, 55, 55)),
+                  shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(35),
+                      side: const BorderSide(color: Color.fromARGB(255, 255, 55, 55)),
+                    ),
+                  ),
+                  backgroundColor: const WidgetStatePropertyAll(Color.fromARGB(255, 255, 55, 55)),
+                ),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Confirm Deletion'),
+                        content: const Text('Are you sure you want to delete this password?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false), // Cancel
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(true), // Confirm
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirm == true) {
+                    final success = await ApiService.deletePassword(widget.password.id);
+
+                    if (success) {
+                      Navigator.pop(context, true); // remove the password here
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Failed to delete password")),
+                      );
+                    }
+                  }
+
+                },
+                child: const Text(
+                  "Delete Password",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              ),
             ],
           ),
         ),
