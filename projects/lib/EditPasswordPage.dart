@@ -79,11 +79,21 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
                   ),
                   backgroundColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
                 ),
-                onPressed: () {
-                  setState(() { // save updated data
-                    //save logic here!!!!!
-                  });
-                  Navigator.pop(context);
+                onPressed: () async { // edit password data
+                  final updated = await ApiService.updatePassword(
+                    widget.password.id,
+                    websiteController.text.trim(),
+                    emailController.text.trim(),
+                    passwordController.text.trim(),
+                  );
+
+                  if (updated) {
+                    Navigator.pop(context, true); // signal to refresh homepage
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Failed to update password")),
+                    );
+                  }
                 },
                 child: const Text(
                   "Save Changes",

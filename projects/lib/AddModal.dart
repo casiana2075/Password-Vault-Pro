@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:projects/services/api_service.dart';
 import 'PasswordField.dart';
 
-class AddModal extends StatelessWidget {
-  const AddModal({super.key});
+class AddModal extends StatefulWidget {
+  final Function onAdded; // callback to reload list from parent
+
+  const AddModal({super.key, required this.onAdded});
+
+  @override
+  State<AddModal> createState() => _AddModalState();
+}
+
+class _AddModalState extends State<AddModal> {
+  final TextEditingController _siteController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +61,8 @@ class AddModal extends StatelessWidget {
               formHeading("Password"),
               PasswordField(
                   hintText: "Enter Password",
-                  icon: Icons.lock_outline
+                  icon: Icons.lock_outline,
+                  controller: _passwordController,
               )
             ],
           ),
@@ -71,8 +84,30 @@ class AddModal extends StatelessWidget {
                             BorderSide(color: Color.fromARGB(255, 55, 114, 255)))),
                     backgroundColor:
                     WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255))),
-                onPressed: () {
-                  Navigator.pop(context);
+                onPressed: () async {
+                  final site = _siteController.text.trim();
+                  final username = _usernameController.text.trim();
+                  final password = _passwordController.text.trim();
+
+                  if (site.isEmpty || username.isEmpty || password.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Please fill in all fields")),
+                    );
+                    return;
+                  }
+
+                  final result = await ApiService.addPassword(site, username, password);
+                  if (result != null) {
+                    widget.onAdded(); // call parent’s reload function
+                    Navigator.pop(context); // close the modal
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Password added successfully")),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Failed to add password")),
+                    );
+                  }
                 },
                 child: Text(
                   "Done",
@@ -91,6 +126,7 @@ class AddModal extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: TextFormField(
+        controller: _usernameController,
         decoration: InputDecoration(
             prefixIcon: Padding(
               padding: EdgeInsets.fromLTRB(
@@ -134,6 +170,7 @@ class AddModal extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: TextFormField(
+        controller: _siteController,
         decoration: InputDecoration(
             prefixIcon: Padding(
               padding: EdgeInsets.fromLTRB(

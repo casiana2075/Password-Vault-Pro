@@ -495,29 +495,34 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
   Future<dynamic> bottomModal(BuildContext context) {
     return showModalBottomSheet(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.0),
-        ),
-        isScrollControlled: true,
-        context: context,
-        builder: (BuildContext bc) {
-          return Wrap(children: <Widget>[
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20.0),
+      ),
+      isScrollControlled: true,
+      context: context,
+      builder: (BuildContext bc) {
+        return Wrap(
+          children: <Widget>[
             Container(
-              child: Container(
-                decoration: BoxDecoration(
-                    color: Colors
-                        .white, //forDialog ? Color(0xFF737373) : Colors.white,
-                    borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(25.0),
-                        topRight: const Radius.circular(25.0))),
-                child: AddModal(),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(25.0),
+                  topRight: Radius.circular(25.0),
+                ),
               ),
-            )
-          ]);
-        });
+              child: AddModal(
+                onAdded: () async {
+                  await loadPasswords(); //re-fetch data from the DB
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void deletePasswordsState() {

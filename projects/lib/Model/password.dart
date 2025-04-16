@@ -3,7 +3,6 @@ class Password {
   final String site;
   final String username;
   final String password;
-  final String createdAt;
   final String logoUrl;
 
   Password({
@@ -11,7 +10,6 @@ class Password {
     required this.site,
     required this.username,
     required this.password,
-    required this.createdAt,
     required this.logoUrl,
   });
 
@@ -21,8 +19,7 @@ class Password {
       site: json['site'],
       username: json['username'],
       password: json['password'],
-      createdAt: json['created_at'],
-      logoUrl: json['logoURL'],
+      logoUrl: json['logourl'],
     );
   }
 }

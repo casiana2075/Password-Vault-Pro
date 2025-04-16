@@ -28,7 +28,7 @@ class ApiService {
     }
   }
 
-  static Future<Password?> addPassword(String site, String username, String password) async {
+  static Future<Password?> addPassword(String site, String username, String password, [String? logoUrl]) async {
     final url = Uri.parse('$baseUrl/passwords');
     final response = await http.post(
       url,
@@ -37,6 +37,7 @@ class ApiService {
         "site": site,
         "username": username,
         "password": password,
+        "logourl": logoUrl,
       }),
     );
 
@@ -46,6 +47,20 @@ class ApiService {
       print('Add failed: ${response.body}');
       return null;
     }
+  }
+
+  static Future<bool> updatePassword(int id, String site, String username, String password) async {
+    final url = Uri.parse('$baseUrl/passwords/$id');
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'site': site,
+        'username': username,
+        'password': password,
+      }),
+    );
+    return response.statusCode == 200;
   }
 
 }
