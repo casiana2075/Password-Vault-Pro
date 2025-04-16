@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Password ValutPro',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.grey),
         fontFamily: GoogleFonts.poppins().fontFamily,
@@ -40,7 +40,10 @@ class _HomePageState extends State<HomePage> {
   Map<int, bool> selectedPasswords = {};
   static bool isInDeleteMode = false;
 
-  List<Password> _passwords = [];
+  List<Password> _allPasswords = [];
+  List<Password> _filteredPasswords = []; // visible list
+  TextEditingController _searchController = TextEditingController();
+
   bool isLoading = true;
 
   @override
@@ -51,7 +54,11 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadPasswords() async {
     try {
-      _passwords = await ApiService.fetchPasswords();
+      final fetched = await ApiService.fetchPasswords();
+      setState(() {
+        _allPasswords = fetched;
+        _filteredPasswords = fetched;
+      });
     } catch (e) {
       print('Error loading: $e');
     } finally {
@@ -77,7 +84,7 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             children : [
               profilePicAddDeleteIcons(plusAsset, deleteAsset,cancelAsset, screenHeight, context),
-              searchBar("Search Password"),
+              searchBar("Search Password", _searchController, _filterPasswords),
               securityRecommendations(lockAsset, 10),
               Padding(
                 padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
@@ -90,12 +97,13 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              _passwords.isEmpty
-                  ? Center(
+              _filteredPasswords.isEmpty ? Center(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 40),
                   child: Text(
-                    "🔐 No passwords stored yet!",
+                    _allPasswords.isEmpty
+                    ? "🔐 No passwords stored yet!"
+                    : "🤔 No matches found.",
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -104,12 +112,12 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               )
-                  : ListView.builder(
+              : ListView.builder(
                 shrinkWrap: true,
                 physics: NeverScrollableScrollPhysics(), // optional
-                itemCount: _passwords.length,
+                itemCount: _filteredPasswords.length,
                 itemBuilder: (context, index) {
-                  final password = _passwords[index];
+                  final password = _filteredPasswords[index];
                   return passwordSection(password, context, index);
                 },
               ),
@@ -248,30 +256,29 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget searchBar(String hintText){
+  Widget searchBar(String hintText, TextEditingController controller, Function(String) onChanged) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: TextFormField(
+        controller: controller,
+        onChanged: onChanged,
         decoration: InputDecoration(
-            filled: true,
-            contentPadding: EdgeInsets.all(13),
-            hintText: hintText,
-            hintStyle:TextStyle(
-                color: Color.fromARGB(255, 154, 153, 153),
-                fontWeight: FontWeight.w500
-            ),
-            fillColor: Color.fromARGB(63, 186, 186, 186),
-            prefixIcon: Padding(
-                padding: EdgeInsets.fromLTRB(25, 0, 3, 0),
-                child: Icon(Icons.search)
-            ),
-            border: OutlineInputBorder(
-                borderSide:  BorderSide(
-                  width: 0,
-                  style: BorderStyle.none,
-                ),
-                borderRadius: BorderRadius.circular(35)
-            )
+          filled: true,
+          contentPadding: EdgeInsets.all(13),
+          hintText: hintText,
+          hintStyle: TextStyle(
+            color: Color.fromARGB(255, 154, 153, 153),
+            fontWeight: FontWeight.w500,
+          ),
+          fillColor: Color.fromARGB(63, 186, 186, 186),
+          prefixIcon: Padding(
+            padding: EdgeInsets.fromLTRB(25, 0, 3, 0),
+            child: Icon(Icons.search),
+          ),
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(35),
+          ),
         ),
         style: TextStyle(),
       ),
@@ -552,6 +559,15 @@ class _HomePageState extends State<HomePage> {
       );
     });
 }
+
+  void _filterPasswords(String query) {
+    final lowerQuery = query.toLowerCase();
+    setState(() {
+      _filteredPasswords = _allPasswords.where((p) =>
+      p.site.toLowerCase().contains(lowerQuery) ||
+          p.username.toLowerCase().contains(lowerQuery)).toList();
+    });
+  }
 }
 
-//acum adauga delete si in http si adauga si edit/add cu baza de date
+//VEZI CU LOGOURL CUM FACI SA AI CATEVA HARDCODATE CA DEJA AI UN PLACEHOLDER DA INTRA PE TOATE PT CA USERUL NU DA LOGO-UL
