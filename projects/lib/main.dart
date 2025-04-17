@@ -52,22 +52,6 @@ class _HomePageState extends State<HomePage> {
     loadPasswords();
   }
 
-  Future<void> loadPasswords() async {
-    try {
-      final fetched = await ApiService.fetchPasswords();
-      setState(() {
-        _allPasswords = fetched;
-        _filteredPasswords = fetched;
-      });
-    } catch (e) {
-      print('Error loading: $e');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final String plusAsset = 'assets/plus.svg'; // #757575
@@ -354,7 +338,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget passwordSection(Password password, BuildContext context, int index) {
+  Widget passwordSection(Password password, BuildContext context, int index){
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Padding(
@@ -405,21 +389,24 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        _highlight(
                           password.site,
-                          style: const TextStyle(
+                          const TextStyle(
                             color: Color.fromARGB(255, 22, 22, 22),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
+                          context,
                         ),
-                        Text(
+                        const SizedBox(height: 4),
+                        _highlight(
                           password.username,
-                          style: const TextStyle(
+                          const TextStyle(
                             color: Color.fromARGB(255, 39, 39, 39),
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
                           ),
+                          context
                         ),
                       ],
                     ),
@@ -446,6 +433,45 @@ class _HomePageState extends State<HomePage> {
             widthFactor: 0.6,
             child: Image.network(password.logoUrl)));
   }
+
+  Widget _highlight(String source, TextStyle baseStyle, BuildContext context) {
+    final query = _searchController.text.trim().toLowerCase();
+
+    if (query.isEmpty) {
+      return Text(source, style: baseStyle);
+    }
+
+    final matches = source.toLowerCase().indexOf(query);
+    if (matches < 0) {
+      return Text(source, style: baseStyle);
+    }
+
+    return RichText(
+      textScaleFactor: MediaQuery.of(context).textScaleFactor,
+      textHeightBehavior: TextHeightBehavior(
+        applyHeightToFirstAscent: false,
+        applyHeightToLastDescent: false,
+      ),
+      strutStyle: StrutStyle(
+        forceStrutHeight: true,
+        height: 1.0, // force consistent line height
+      ),
+      text: TextSpan(
+        style: baseStyle, // main style
+        children: [
+          TextSpan(text: source.substring(0, matches)),
+          TextSpan(
+            text: source.substring(matches, matches + query.length),
+            style: baseStyle.copyWith(
+              backgroundColor: const Color.fromARGB(150, 118, 191, 255),
+            ),
+          ),
+          TextSpan(text: source.substring(matches + query.length)),
+        ],
+      ),
+    );
+  }
+
 
   void deleteSelectedPasswords() async {
     List<int> idsToDelete = selectedPasswords.entries
@@ -502,36 +528,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<dynamic> bottomModal(BuildContext context) {
-    return showModalBottomSheet(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.0),
-      ),
-      isScrollControlled: true,
-      context: context,
-      builder: (BuildContext bc) {
-        return Wrap(
-          children: <Widget>[
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(25.0),
-                  topRight: Radius.circular(25.0),
-                ),
-              ),
-              child: AddModal(
-                onAdded: () async {
-                  await loadPasswords(); //re-fetch data from the DB
-                },
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void deletePasswordsState() {
     setState(() {
       isInDeleteMode = !isInDeleteMode;
@@ -567,6 +563,52 @@ class _HomePageState extends State<HomePage> {
       p.site.toLowerCase().contains(lowerQuery) ||
           p.username.toLowerCase().contains(lowerQuery)).toList();
     });
+  }
+
+  Future<dynamic> bottomModal(BuildContext context) {
+    return showModalBottomSheet(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20.0),
+      ),
+      isScrollControlled: true,
+      context: context,
+      builder: (BuildContext bc) {
+        return Wrap(
+          children: <Widget>[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(25.0),
+                  topRight: Radius.circular(25.0),
+                ),
+              ),
+              child: AddModal(
+                onAdded: () async {
+                  await loadPasswords(); //re-fetch data from the DB
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> loadPasswords() async {
+    try {
+      final fetched = await ApiService.fetchPasswords();
+      setState(() {
+        _allPasswords = fetched;
+        _filteredPasswords = fetched;
+      });
+    } catch (e) {
+      print('Error loading: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 }
 
