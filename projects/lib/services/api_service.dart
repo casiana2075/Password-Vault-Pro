@@ -37,7 +37,7 @@ class ApiService {
         "site": site,
         "username": username,
         "password": password,
-        "logourl": logoUrl,
+        "logoUrl": logoUrl,
       }),
     );
 
@@ -61,6 +61,24 @@ class ApiService {
       }),
     );
     return response.statusCode == 200;
+  }
+
+  static Future<Map<String, String>> fetchWebsiteLogos() async {
+    final url = Uri.parse('$baseUrl/logos');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> logos = json.decode(response.body);
+
+      //filter only entries where name and url are not null
+      return {
+        for (var logo in logos)
+          if (logo['site_name'] != null && logo['logo_url'] != null)
+            logo['site_name'].toString().toLowerCase(): logo['logo_url'].toString()
+      };
+    } else {
+      throw Exception('Failed to fetch logos');
+    }
   }
 
 }

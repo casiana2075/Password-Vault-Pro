@@ -38,12 +38,12 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Map<int, bool> selectedPasswords = {};
-  static bool isInDeleteMode = false;
 
   List<Password> _allPasswords = [];
   List<Password> _filteredPasswords = []; // visible list
   TextEditingController _searchController = TextEditingController();
 
+  static bool isInDeleteMode = false;
   bool isLoading = true;
 
   @override
@@ -61,13 +61,17 @@ class _HomePageState extends State<HomePage> {
     final String editAsset = 'assets/edit.svg';
     final String cancelAsset = 'assets/cancel.svg';
 
-    double screenHeight = MediaQuery.of(context).size.height;
+    double screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
     return SafeArea(
       child: Scaffold(
         body: SingleChildScrollView(
           child: Column(
-            children : [
-              profilePicAddDeleteIcons(plusAsset, deleteAsset,cancelAsset, screenHeight, context),
+            children: [
+              profilePicAddDeleteIcons(
+                  plusAsset, deleteAsset, cancelAsset, screenHeight, context),
               searchBar("Search Password", _searchController, _filterPasswords),
               securityRecommendations(lockAsset, 10),
               Padding(
@@ -76,7 +80,8 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text(
                       "Passwords",
-                      style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          fontSize: 25, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -86,8 +91,8 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.only(top: 40),
                   child: Text(
                     _allPasswords.isEmpty
-                    ? "🔐 No passwords stored yet!"
-                    : "🤔 No matches found.",
+                        ? "🔐 No passwords stored yet!"
+                        : "🤔 No matches found.",
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -96,7 +101,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               )
-              : ListView.builder(
+                  : ListView.builder(
                 shrinkWrap: true,
                 physics: NeverScrollableScrollPhysics(), // optional
                 itemCount: _filteredPasswords.length,
@@ -121,7 +126,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget circleAvatarRound(){
+  Widget circleAvatarRound() {
     return CircleAvatar(
         radius: 30,
         backgroundColor: Color(0xFFBABABA),
@@ -139,9 +144,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget profilePicAddDeleteIcons(String plusAsset, String deleteAsset, String cancelAsset, double screenHeight, BuildContext context){
+  Widget profilePicAddDeleteIcons(String plusAsset, String deleteAsset,
+      String cancelAsset, double screenHeight, BuildContext context) {
     String getGreeting() {
-      int hour = DateTime.now().hour;
+      int hour = DateTime
+          .now()
+          .hour;
       if (hour >= 3 && hour < 11) {
         return "Good morning";
       } else if (hour >= 11 && hour < 17) {
@@ -189,9 +197,11 @@ class _HomePageState extends State<HomePage> {
             children: [
               _hoverButton(plusAsset, screenHeight, () => bottomModal(context)),
               if (isInDeleteMode)
-                _hoverButton(cancelAsset, screenHeight, () => deletePasswordsState() )
+                _hoverButton(
+                    cancelAsset, screenHeight, () => deletePasswordsState())
               else
-                _hoverButton(deleteAsset, screenHeight, ()=> deletePasswordsState())
+                _hoverButton(
+                    deleteAsset, screenHeight, () => deletePasswordsState())
             ],
           ),
         ],
@@ -199,7 +209,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _hoverButton(String asset, double screenHeight, VoidCallback onTap, [String? password]) {
+  Widget _hoverButton(String asset, double screenHeight, VoidCallback onTap,
+      [String? password]) {
     return StatefulBuilder(
       builder: (context, setState) {
         return GestureDetector(
@@ -208,15 +219,16 @@ class _HomePageState extends State<HomePage> {
             borderRadius: BorderRadius.circular(35),
             splashColor: Colors.blue[200],
             onTap: () {
-              if (asset.contains('plus')){
+              if (asset.contains('plus')) {
                 bottomModal(context);
               }
-              else if (asset.contains('delete') || asset.contains('cancel'))
-                { deletePasswordsState(); }
+              else if (asset.contains('delete') || asset.contains('cancel')) {
+                deletePasswordsState();
+              }
               else if (asset.contains('copy') && password != null) {
                 copyPassword(context, password);
-                }
-              },
+              }
+            },
             child: Container(
               decoration: BoxDecoration(
                 color: const Color.fromARGB(0, 186, 186, 186),
@@ -229,7 +241,8 @@ class _HomePageState extends State<HomePage> {
                     asset,
                     height: 25,
                     width: 25,
-                    colorFilter: const ColorFilter.mode(Colors.black45, BlendMode.srcIn),
+                    colorFilter: const ColorFilter.mode(
+                        Colors.black45, BlendMode.srcIn),
                   ),
                 ],
               ),
@@ -240,7 +253,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget searchBar(String hintText, TextEditingController controller, Function(String) onChanged) {
+  Widget searchBar(String hintText, TextEditingController controller,
+      Function(String) onChanged) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: TextFormField(
@@ -295,7 +309,8 @@ class _HomePageState extends State<HomePage> {
                   icon,
                   height: 22,
                   width: 22,
-                  colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                  colorFilter: const ColorFilter.mode(
+                      Colors.black, BlendMode.srcIn),
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -310,7 +325,9 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     Text(
-                      count == 0 ? "No security risks found" : "Security risks found",
+                      count == 0
+                          ? "No security risks found"
+                          : "Security risks found",
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
@@ -329,7 +346,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(width: 3),
-                const Icon(Icons.arrow_forward_ios, size: 15, color: Colors.black),
+                const Icon(
+                    Icons.arrow_forward_ios, size: 15, color: Colors.black),
               ],
             ),
           ),
@@ -338,8 +356,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget passwordSection(Password password, BuildContext context, int index){
-    double screenHeight = MediaQuery.of(context).size.height;
+  Widget passwordSection(Password password, BuildContext context, int index) {
+    double screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(25.0, 10, 25.0, 10),
@@ -348,7 +369,7 @@ class _HomePageState extends State<HomePage> {
           // navigate to EditPasswordPage
           final updated = await Navigator.push(
             context,
-            MaterialPageRoute(        //give reference to password item
+            MaterialPageRoute( //give reference to password item
               builder: (context) => EditPasswordPage(password: password),
             ),
           );
@@ -400,20 +421,21 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 4),
                         _highlight(
-                          password.username,
-                          const TextStyle(
-                            color: Color.fromARGB(255, 39, 39, 39),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          context
+                            password.username,
+                            const TextStyle(
+                              color: Color.fromARGB(255, 39, 39, 39),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            context
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              _hoverButton('assets/copy.svg', screenHeight, () {}, password.password),
+              _hoverButton(
+                  'assets/copy.svg', screenHeight, () {}, password.password),
             ],
           ),
         ),
@@ -423,15 +445,24 @@ class _HomePageState extends State<HomePage> {
 
   Widget logoBox(Password password) {
     return Container(
-        height: 60,
-        width: 60,
-        decoration: BoxDecoration(
-            color: Color.fromARGB(255, 239, 239, 239),
-            borderRadius: BorderRadius.circular(30)),
-        child: FractionallySizedBox(
-            heightFactor: 0.6,
-            widthFactor: 0.6,
-            child: Image.network(password.logoUrl)));
+      height: 55,
+      width: 55,
+      decoration: BoxDecoration(
+        color: Color.fromARGB(255, 239, 239, 239),
+        borderRadius: BorderRadius.circular(50),
+      ),
+      child: FractionallySizedBox(
+        heightFactor: 0.8,
+        widthFactor: 0.8,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(50),
+          child: Image.network(
+            password.logoUrl,
+            fit: BoxFit.cover, // make sure image fits within clipped bounds
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _highlight(String source, TextStyle baseStyle, BuildContext context) {
@@ -447,7 +478,9 @@ class _HomePageState extends State<HomePage> {
     }
 
     return RichText(
-      textScaleFactor: MediaQuery.of(context).textScaleFactor,
+      textScaleFactor: MediaQuery
+          .of(context)
+          .textScaleFactor,
       textHeightBehavior: TextHeightBehavior(
         applyHeightToFirstAscent: false,
         applyHeightToLastDescent: false,
@@ -472,7 +505,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
   void deleteSelectedPasswords() async {
     List<int> idsToDelete = selectedPasswords.entries
         .where((entry) => entry.value == true)
@@ -485,7 +517,8 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Confirm Deletion'),
-          content: Text('Are you sure you want to delete ${idsToDelete.length} selected password(s)?'),
+          content: Text('Are you sure you want to delete ${idsToDelete
+              .length} selected password(s)?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -535,7 +568,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void copyPassword(BuildContext context, String password) {
-    if (password.trim().isEmpty) {
+    if (password
+        .trim()
+        .isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Password is empty, nothing to copy."),
@@ -554,7 +589,7 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     });
-}
+  }
 
   void _filterPasswords(String query) {
     final lowerQuery = query.toLowerCase();
@@ -612,4 +647,5 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-//VEZI CU LOGOURL CUM FACI SA AI CATEVA HARDCODATE CA DEJA AI UN PLACEHOLDER DA INTRA PE TOATE PT CA USERUL NU DA LOGO-UL
+//VEZI CU LOGOURL CUM FACI SA iei diin bd numele site ului si daca gasesti atunci sa pui url ul in db cu parole
+

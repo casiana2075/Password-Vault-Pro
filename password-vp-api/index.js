@@ -31,9 +31,8 @@ app.delete('/passwords/:id', async (req, res) => {
 });
 
 app.post('/passwords', async (req, res) => {
-  const { site, username, password, logoURL } = req.body;
-  const finalLogoUrl = logoURL || "https://www.pngplay.com/wp-content/uploads/6/Mobile-Application-Blue-Icon-Transparent-PNG.png";
-
+  const { site, username, password, logoUrl } = req.body;
+  const finalLogoUrl = logoUrl;
   try {
     const result = await pool.query(
       'INSERT INTO passwords (site, username, password, logourl) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -49,17 +48,14 @@ app.post('/passwords', async (req, res) => {
 app.put('/passwords/:id', async (req, res) => {
   const { id } = req.params;
   const { site, username, password } = req.body;
-
   try {
     const result = await pool.query(
       'UPDATE passwords SET site = $1, username = $2, password = $3 WHERE id = $4 RETURNING *',
       [site, username, password, id]
     );
-
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Password not found' });
     }
-
     res.json(result.rows[0]);
   } catch (err) {
     console.error('DB Update Error:', err);
@@ -67,6 +63,15 @@ app.put('/passwords/:id', async (req, res) => {
   }
 });
 
-
+//for the website_logos table
+app.get('/logos', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM website_logos');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('DB Logos Fetch Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.listen(3000, () => console.log('API running at http://localhost:3000'));

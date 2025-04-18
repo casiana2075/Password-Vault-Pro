@@ -15,6 +15,18 @@ class _AddModalState extends State<AddModal> {
   final TextEditingController _siteController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _logoUrlController = TextEditingController();
+
+
+  Map<String, String> _websiteLogos = {}; // all website logos available
+
+  bool isLogosLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadWebsiteLogos();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,13 +59,11 @@ class _AddModalState extends State<AddModal> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w400),
             ),
           ),
-          SizedBox(
-            height: 30,
-          ),
-          searchText("Search for a website"),
-          SizedBox(
-            height: 10,
-          ),
+          SizedBox( height: 30 ),
+          isLogosLoading
+              ? const Center(child: CircularProgressIndicator())
+              : searchTextWithSuggestions(),
+          SizedBox( height: 10 ),
           Column(
             children: [
               formHeading("Username / E-mail"),
@@ -88,6 +98,9 @@ class _AddModalState extends State<AddModal> {
                   final site = _siteController.text.trim();
                   final username = _usernameController.text.trim();
                   final password = _passwordController.text.trim();
+                  final logoUrl = _logoUrlController.text.trim().isNotEmpty
+                      ? _logoUrlController.text.trim()
+                      : 'https://www.pngplay.com/wp-content/uploads/6/Mobile-Application-Blue-Icon-Transparent-PNG.png';
 
                   if (site.isEmpty || username.isEmpty || password.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -96,10 +109,11 @@ class _AddModalState extends State<AddModal> {
                     return;
                   }
 
-                  final result = await ApiService.addPassword(site, username, password);
+                  final result = await ApiService.addPassword(site, username, password, logoUrl);
+
                   if (result != null) {
-                    widget.onAdded(); // call parent’s reload function
-                    Navigator.pop(context); // close the modal
+                    widget.onAdded();
+                    Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Password added successfully")),
                     );
@@ -108,12 +122,14 @@ class _AddModalState extends State<AddModal> {
                       SnackBar(content: Text("Failed to add password")),
                     );
                   }
-                },
+                }
+                ,
                 child: Text(
-                  "Done",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                )),
-          ),
+                    "Done",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  )
+                ),
+           ),
           SizedBox(
             height: 30,
           ),
@@ -166,34 +182,95 @@ class _AddModalState extends State<AddModal> {
     );
   }
 
-  Widget searchText(String hintText) {
+  Widget searchTextWithSuggestions() {
+    final websites = _websiteLogos.keys.toList();
+    List<String> filteredWebsites = websites
+        .where((site) => site.toLowerCase().contains(_siteController.text.toLowerCase()))
+        .toList();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: TextFormField(
-        controller: _siteController,
-        decoration: InputDecoration(
-            prefixIcon: Padding(
-              padding: EdgeInsets.fromLTRB(
-                  20, 5, 5, 5), // add padding to adjust icon
-              child: Icon(
-                Icons.search,
+      child: Column(
+        children: [
+          TextFormField(
+            controller: _siteController,
+            decoration: InputDecoration(
+              prefixIcon: Padding(
+                padding: EdgeInsets.fromLTRB(20, 5, 5, 5),
+                child: Icon(
+                  Icons.search,
+                  color: Color.fromARGB(255, 82, 101, 120),
+                ),
+              ),
+              filled: true,
+              contentPadding: EdgeInsets.all(16),
+              hintText: "Search or type website",
+              hintStyle: TextStyle(
                 color: Color.fromARGB(255, 82, 101, 120),
+                fontWeight: FontWeight.w500,
+              ),
+              fillColor: Color.fromARGB(247, 232, 235, 237),
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(35),
               ),
             ),
-            filled: true,
-            contentPadding: EdgeInsets.all(16),
-            hintText: hintText,
-            hintStyle: TextStyle(
-                color: Color.fromARGB(255, 82, 101, 120), fontWeight: FontWeight.w500),
-            fillColor: Color.fromARGB(247, 232, 235, 237),
-            border: OutlineInputBorder(
-                borderSide: BorderSide(
-                  width: 0,
-                  style: BorderStyle.none,
-                ),
-                borderRadius: BorderRadius.circular(35))),
-        style: TextStyle(),
+            onChanged: (value) {
+              setState(() {});
+            },
+          ),
+          if (_siteController.text.isNotEmpty && filteredWebsites.isNotEmpty)
+            Container(
+              constraints: BoxConstraints(maxHeight: 150),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: filteredWebsites.length,
+                itemBuilder: (context, index) {
+                  final suggestion = filteredWebsites[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      radius: 12,
+                      backgroundImage: NetworkImage(_websiteLogos[suggestion]!),
+                      backgroundColor: Colors.transparent,
+                    ),
+                    title: Text(suggestion),
+                    onTap: () {
+                      setState(() {
+                        _siteController.text = suggestion;
+                        _siteController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _siteController.text.length),
+                        );
+                        _logoUrlController.text = _websiteLogos[suggestion] ?? '';
+                      });
+                      FocusScope.of(context).unfocus(); // hide keyboard
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }
+
+  Future<void> loadWebsiteLogos() async {
+    try {
+      final logos = await ApiService.fetchWebsiteLogos();
+      setState(() {
+        _websiteLogos = logos;
+        isLogosLoading = false; // after logos are fetched
+      });
+    } catch (e) {
+      print('Error loading logos: $e');
+      setState(() {
+        isLogosLoading = false; // even if error, allow UI to proceed
+      });
+    }
+  }
+
 }
