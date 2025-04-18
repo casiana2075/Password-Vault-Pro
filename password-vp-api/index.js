@@ -47,11 +47,11 @@ app.post('/passwords', async (req, res) => {
 
 app.put('/passwords/:id', async (req, res) => {
   const { id } = req.params;
-  const { site, username, password } = req.body;
+  const { site, username, password, logoUrl } = req.body;
   try {
     const result = await pool.query(
-      'UPDATE passwords SET site = $1, username = $2, password = $3 WHERE id = $4 RETURNING *',
-      [site, username, password, id]
+      'UPDATE passwords SET site = $1, username = $2, password = $3, logourl = $4 WHERE id = $5 RETURNING *',
+      [site, username, password, logoUrl, id] // <- now also updating logo
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Password not found' });
@@ -62,6 +62,7 @@ app.put('/passwords/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 //for the website_logos table
 app.get('/logos', async (req, res) => {

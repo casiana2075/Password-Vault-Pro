@@ -49,7 +49,7 @@ class ApiService {
     }
   }
 
-  static Future<bool> updatePassword(int id, String site, String username, String password) async {
+  static Future<bool> updatePassword(int id, String site, String username, String password, String logoUrl) async {
     final url = Uri.parse('$baseUrl/passwords/$id');
     final response = await http.put(
       url,
@@ -58,10 +58,12 @@ class ApiService {
         'site': site,
         'username': username,
         'password': password,
+        'logoUrl': logoUrl,
       }),
     );
     return response.statusCode == 200;
   }
+
 
   static Future<Map<String, String>> fetchWebsiteLogos() async {
     final url = Uri.parse('$baseUrl/logos');

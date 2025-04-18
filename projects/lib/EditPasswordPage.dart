@@ -16,6 +16,10 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
   late TextEditingController websiteController;
   late TextEditingController emailController;
   late TextEditingController passwordController;
+  late TextEditingController logoUrlController;
+
+  Map<String, String> _websiteLogos = {};
+  bool isLoadingLogos = true;
 
   @override
   void initState() {
@@ -23,6 +27,9 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
     websiteController = TextEditingController(text: widget.password.site);
     emailController = TextEditingController(text: widget.password.username);
     passwordController = TextEditingController(text: widget.password.password);
+    logoUrlController = TextEditingController(text: widget.password.logoUrl);
+
+    loadWebsiteLogos();
   }
 
   @override
@@ -30,6 +37,7 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
     websiteController.dispose();
     emailController.dispose();
     passwordController.dispose();
+    logoUrlController.dispose();
     super.dispose();
   }
 
@@ -58,7 +66,9 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
           child: Column(
             children: [
               _formHeading("Website"),
-              _formTextField("Enter website name", Icons.language, websiteController),
+              isLoadingLogos
+                  ? const Center(child: CircularProgressIndicator())
+                  : searchWebsiteField(),
               _formHeading("Email"),
               _formTextField("Enter email", Icons.email, emailController),
               _formHeading("Password"),
@@ -85,6 +95,7 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
                     websiteController.text.trim(),
                     emailController.text.trim(),
                     passwordController.text.trim(),
+                    logoUrlController.text.trim(),
                   );
 
                   if (updated) {
@@ -208,4 +219,97 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
       ),
     );
   }
+
+  Widget searchWebsiteField() {
+    final websites = _websiteLogos.keys.toList();
+    List<String> filteredWebsites = websites
+        .where((site) => site.toLowerCase().contains(websiteController.text.toLowerCase()))
+        .toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Column(
+        children: [
+          TextFormField(
+            controller: websiteController,
+            decoration: InputDecoration(
+              prefixIcon: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 5, 5, 5),
+                child: Icon(
+                  Icons.language,
+                  color: const Color.fromARGB(255, 82, 101, 120),
+                ),
+              ),
+              filled: true,
+              contentPadding: const EdgeInsets.all(16),
+              hintText: "Search or type website",
+              hintStyle: const TextStyle(
+                color: Color.fromARGB(255, 82, 101, 120),
+                fontWeight: FontWeight.w500,
+              ),
+              fillColor: const Color.fromARGB(247, 232, 235, 237),
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(35),
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {}); // Refresh suggestions
+            },
+          ),
+          if (websiteController.text.isNotEmpty && filteredWebsites.isNotEmpty)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 150),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: filteredWebsites.length,
+                itemBuilder: (context, index) {
+                  final suggestion = filteredWebsites[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      radius: 12,
+                      backgroundImage: NetworkImage(_websiteLogos[suggestion]!),
+                      backgroundColor: Colors.transparent,
+                    ),
+                    title: Text(suggestion),
+                    onTap: () {
+                      setState(() {
+                        websiteController.text = suggestion;
+                        websiteController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: websiteController.text.length),
+                        );
+                        logoUrlController.text = _websiteLogos[suggestion] ?? '';
+                      });
+                      FocusScope.of(context).unfocus(); // Close keyboard and dropdown
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+
+  Future<void> loadWebsiteLogos() async {
+    try {
+      final logos = await ApiService.fetchWebsiteLogos();
+      setState(() {
+        _websiteLogos = logos;
+        isLoadingLogos = false;
+      });
+    } catch (e) {
+      print('Failed to load logos: $e');
+      setState(() {
+        isLoadingLogos = false;
+      });
+    }
+  }
+
 }

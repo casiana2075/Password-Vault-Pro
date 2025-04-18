@@ -448,7 +448,7 @@ class _HomePageState extends State<HomePage> {
       height: 55,
       width: 55,
       decoration: BoxDecoration(
-        color: Color.fromARGB(255, 239, 239, 239),
+        color: Color.fromARGB(0, 239, 239, 239),
         borderRadius: BorderRadius.circular(50),
       ),
       child: FractionallySizedBox(
