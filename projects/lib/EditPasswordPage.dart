@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:projects/Model/password.dart';
 import 'package:projects/PasswordField.dart';
 import 'package:projects/services/api_service.dart';
+import 'package:projects/utils/password_generator.dart';
+
 
 class EditPasswordPage extends StatefulWidget {
   final Password password;
@@ -73,9 +75,26 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
               _formTextField("Enter email", Icons.email, emailController),
               _formHeading("Password"),
               PasswordField(
-                hintText : "Enter password", icon: Icons.lock_outline, controller: passwordController),
+                hintText: "Enter password",
+                icon: Icons.lock_outline,
+                controller: passwordController,
+              ),
+              const SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: () {
+                  final generated = generateStrongPassword();
+                  setState(() {
+                    passwordController.text = generated;
+                  });
+                },
+                icon: Icon(Icons.refresh, size: 16),
+                label: Text("Generate strong password"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Color.fromARGB(255, 55, 114, 255),
+                ),
+              ),
               SizedBox(
-                height: 50,
+                height: 30,
               ),
               ElevatedButton(
                 style: ButtonStyle(

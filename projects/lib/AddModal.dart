@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:projects/services/api_service.dart';
 import 'PasswordField.dart';
+import 'package:projects/utils/password_generator.dart';
+
 
 class AddModal extends StatefulWidget {
   final Function onAdded; // callback to reload list from parent
@@ -59,21 +61,36 @@ class _AddModalState extends State<AddModal> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w400),
             ),
           ),
-          SizedBox( height: 30 ),
-          isLogosLoading
-              ? const Center(child: CircularProgressIndicator())
-              : searchTextWithSuggestions(),
-          SizedBox( height: 10 ),
+          SizedBox( height: 20 ),
           Column(
             children: [
+              formHeading("Website"),
+              isLogosLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : searchTextWithSuggestions(),
+              SizedBox(height: 10),
               formHeading("Username / E-mail"),
               formTextField("Enter Username or E-mail", Icons.alternate_email),
               formHeading("Password"),
               PasswordField(
-                  hintText: "Enter Password",
-                  icon: Icons.lock_outline,
-                  controller: _passwordController,
-              )
+                hintText: "Enter Password",
+                icon: Icons.lock_outline,
+                controller: _passwordController,
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  final generated = generateStrongPassword();
+                  setState(() {
+                    _passwordController.text = generated;
+                  });
+                },
+                icon: Icon(Icons.refresh, size: 16),
+                label: Text("Generate strong password"),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                  foregroundColor: Color.fromARGB(255, 55, 114, 255),
+                ),
+              ),
             ],
           ),
           SizedBox(
@@ -298,5 +315,4 @@ class _AddModalState extends State<AddModal> {
       });
     }
   }
-
 }
