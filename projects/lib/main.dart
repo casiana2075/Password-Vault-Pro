@@ -647,5 +647,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-//VEZI CU LOGOURL CUM FACI SA iei diin bd numele site ului si daca gasesti atunci sa pui url ul in db cu parole
+//vezi cu use case ul cand NU SUNT completate field urile la add password ca da err in homepage si nu e ok si vezi si cu recom
+
+
 

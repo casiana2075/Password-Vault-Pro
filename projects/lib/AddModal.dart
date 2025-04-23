@@ -102,12 +102,38 @@ class _AddModalState extends State<AddModal> {
                       ? _logoUrlController.text.trim()
                       : 'https://www.pngplay.com/wp-content/uploads/6/Mobile-Application-Blue-Icon-Transparent-PNG.png';
 
-                  if (site.isEmpty || username.isEmpty || password.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Please fill in all fields")),
+                  if (site.isEmpty || username.isEmpty || password.isEmpty) { // use case to complete all fields
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false, // prevent tapping outside to close immediately
+                      builder: (BuildContext context) {
+                        Future.delayed(Duration(seconds: 2), () {
+                          Navigator.of(context).pop();
+                        });
+                        return AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          content: Container(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Text(
+                              "⚠ Please fill in all fields ⚠",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          backgroundColor: Color.fromARGB(255, 50, 50, 50), // darker modern background
+                          elevation: 8,
+                          contentPadding: EdgeInsets.zero,
+                        );
+                      },
                     );
                     return;
                   }
+
 
                   final result = await ApiService.addPassword(site, username, password, logoUrl);
 
