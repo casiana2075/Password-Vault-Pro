@@ -61,6 +61,8 @@ class _HomePageState extends State<HomePage> {
     final String editAsset = 'assets/edit.svg';
     final String cancelAsset = 'assets/cancel.svg';
 
+    final summary = getSecuritySummary(_allPasswords);
+
     double screenHeight = MediaQuery
         .of(context)
         .size
@@ -73,7 +75,7 @@ class _HomePageState extends State<HomePage> {
               profilePicAddDeleteIcons(
                   plusAsset, deleteAsset, cancelAsset, screenHeight, context),
               searchBar("Search Password", _searchController, _filterPasswords),
-              securityRecommendations(lockAsset, 10),
+              securityRecommendations(lockAsset, summary['count']),
               Padding(
                 padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
                 child: Row(
@@ -294,7 +296,15 @@ class _HomePageState extends State<HomePage> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => SecurityRecomPage()),
+              MaterialPageRoute(
+                builder: (context) => SecurityRecomPage(
+                  passwords: _allPasswords,
+                  onUpdated: () async {
+                    await loadPasswords(); // re-fetch updated data
+                    setState(() {});       // refresh homepage UI
+                  },
+                ),
+              ),
             );
           },
           child: Container(
@@ -645,6 +655,31 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
+
+  Map<String, dynamic> getSecuritySummary(List<Password> passwords) {
+    final Map<String, List<String>> repeatedMap = {};
+    final List<Password> weakList = [];
+
+    for (var p in passwords) {
+      repeatedMap.putIfAbsent(p.password, () => []).add(p.site);
+
+      final pw = p.password;
+      final hasMinLength = pw.length >= 8;
+      final hasLetter = pw.contains(RegExp(r'[A-Za-z]'));
+      final hasDigit = pw.contains(RegExp(r'\d'));
+      final hasSpecial = pw.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+      final isWeak = !(hasMinLength && hasLetter && hasDigit && hasSpecial);
+      if (isWeak) weakList.add(p);
+    }
+
+    final repeated = repeatedMap..removeWhere((k, v) => v.length < 2);
+    return {
+      'repeated': repeated,
+      'weak': weakList,
+      'count': repeated.length + weakList.length,
+    };
+  }
+
 }
 
 //vezi cu use case ul cand NU SUNT completate field urile la add password ca da err in homepage si nu e ok si vezi si cu recom
