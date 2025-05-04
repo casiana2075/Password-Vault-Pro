@@ -1,12 +1,23 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../Model/password.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:3000'; // use 10.0.2.2 for emulator
+  static const String baseUrl = 'http://10.0.2.2:3000'; // for emulator(10.0.2.2:3000)
+
+  static Future<String?> _getIdToken() async {
+    final user = FirebaseAuth.instance.currentUser;
+    return await user?.getIdToken();
+  }
 
   static Future<List<Password>> fetchPasswords() async {
-    final response = await http.get(Uri.parse('$baseUrl/passwords'));
+    final token = await _getIdToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/passwords'),
+      headers: {'Authorization': token ?? ''},
+    );
 
     if (response.statusCode == 200) {
       List<dynamic> body = jsonDecode(response.body);
@@ -17,22 +28,23 @@ class ApiService {
   }
 
   static Future<bool> deletePassword(int id) async {
-    final url = Uri.parse('$baseUrl/passwords/$id');
-    final response = await http.delete(url);
+    final token = await _getIdToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/passwords/$id'),
+      headers: {'Authorization': token ?? ''},
+    );
 
-    if (response.statusCode == 200) {
-      return true;
-    } else {
-      print('Failed to delete: ${response.statusCode}');
-      return false;
-    }
+    return response.statusCode == 200;
   }
 
   static Future<Password?> addPassword(String site, String username, String password, [String? logoUrl]) async {
-    final url = Uri.parse('$baseUrl/passwords');
+    final token = await _getIdToken();
     final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
+      Uri.parse('$baseUrl/passwords'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ?? '',
+      },
       body: jsonEncode({
         "site": site,
         "username": username,
@@ -50,37 +62,69 @@ class ApiService {
   }
 
   static Future<bool> updatePassword(int id, String site, String username, String password, String logoUrl) async {
-    final url = Uri.parse('$baseUrl/passwords/$id');
+    final token = await _getIdToken();
     final response = await http.put(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
+      Uri.parse('$baseUrl/passwords/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ?? '',
+      },
+      body: jsonEncode({
         'site': site,
         'username': username,
         'password': password,
         'logoUrl': logoUrl,
       }),
     );
+
     return response.statusCode == 200;
+  }
+
+  static Future<Map<String, dynamic>?> createOrFetchUser() async {
+    final token = await _getIdToken();
+    final url = Uri.parse('$baseUrl/users');
+
+    final response = await http.get(url, headers: {
+      'Authorization': token ?? '',
+    });
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      print('User creation/fetch failed: ${response.body}');
+      return null;
+    }
   }
 
 
   static Future<Map<String, String>> fetchWebsiteLogos() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final idToken = await user.getIdToken();
+    if (idToken == null) {
+      throw Exception('Failed to retrieve ID token');
+    }
     final url = Uri.parse('$baseUrl/logos');
-    final response = await http.get(url);
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': idToken,
+      },
+    );
 
     if (response.statusCode == 200) {
       final List<dynamic> logos = json.decode(response.body);
-
-      //filter only entries where name and url are not null
       return {
         for (var logo in logos)
           if (logo['site_name'] != null && logo['logo_url'] != null)
             logo['site_name'].toString().toLowerCase(): logo['logo_url'].toString()
       };
     } else {
-      throw Exception('Failed to fetch logos');
+      throw Exception('Failed to fetch logos: ${response.statusCode}');
     }
   }
-
 }
+
