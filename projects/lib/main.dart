@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/login': (context) => const LoginPage(),
       },
+      initialRoute: '/login',
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
@@ -43,5 +44,3 @@ class MyApp extends StatelessWidget {
   }
 }
 
-//vezi sa hash uiesti dupa parolele cumva vezi pe cht
-//vezi sa se poata loga doar cu email-uri existente -> delete the sign in with username+password(mom il las sa am mai multi useri la testare)

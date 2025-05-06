@@ -23,7 +23,7 @@ class _HomePageState extends State<HomePage> {
 
   List<Password> _allPasswords = [];
   List<Password> _filteredPasswords = []; // visible list
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   static bool isInDeleteMode = false;
   bool isLoading = true;
@@ -491,9 +491,6 @@ class _HomePageState extends State<HomePage> {
     }
 
     return RichText(
-      textScaleFactor: MediaQuery
-          .of(context)
-          .textScaleFactor,
       textHeightBehavior: TextHeightBehavior(
         applyHeightToFirstAscent: false,
         applyHeightToLastDescent: false,
@@ -514,7 +511,9 @@ class _HomePageState extends State<HomePage> {
           ),
           TextSpan(text: source.substring(matches + query.length)),
         ],
-      ),
+      ), textScaler: TextScaler.linear(MediaQuery
+          .of(context)
+          .textScaleFactor),
     );
   }
 
@@ -668,16 +667,25 @@ class _HomePageState extends State<HomePage> {
   Future<void> loadPasswords() async {
     try {
       final fetched = await ApiService.fetchPasswords();
-      setState(() {
-        _allPasswords = fetched;
-        _filteredPasswords = fetched;
-      });
+      if (mounted) { // currently at homepage
+        setState(() {
+          _allPasswords = fetched;
+          _filteredPasswords = fetched;
+        });
+      }
     } catch (e) {
       print('Error loading: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load passwords: $e')),
+        );
+      }
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 

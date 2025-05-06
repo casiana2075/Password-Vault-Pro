@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:projects/services/api_service.dart';
+import 'package:projects/utils/authenticateUserBiometrically.dart';
 import 'PasswordField.dart';
 import 'package:projects/utils/password_generator.dart';
 
@@ -28,6 +29,14 @@ class _AddModalState extends State<AddModal> {
   void initState() {
     super.initState();
     loadWebsiteLogos();
+  }
+
+  @override void dispose() {
+    _siteController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _logoUrlController.dispose();
+    super.dispose();
   }
 
   @override
@@ -125,7 +134,9 @@ class _AddModalState extends State<AddModal> {
                       barrierDismissible: false, // prevent tapping outside to close immediately
                       builder: (BuildContext context) {
                         Future.delayed(Duration(seconds: 2), () {
-                          Navigator.of(context).pop();
+                          if (mounted) {
+                            Navigator.of(context).pop();
+                          }
                         });
                         return AlertDialog(
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -148,19 +159,29 @@ class _AddModalState extends State<AddModal> {
                         );
                       },
                     );
+                    if (!mounted) return;
+                  }
+
+                  //check the user biometrics
+                  final isAuthenticated = await authenticateUserBiometrically();
+
+                  if (!isAuthenticated) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Biometric authentication failed")),
+                    );
                     return;
                   }
 
-
                   final result = await ApiService.addPassword(site, username, password, logoUrl);
 
-                  if (result != null) {
+                  if (result != null && mounted) {
                     widget.onAdded();
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Password added successfully")),
                     );
-                  } else {
+                  } else if (mounted){
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Failed to add password")),
                     );
