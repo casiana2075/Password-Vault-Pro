@@ -22,4 +22,20 @@ class Password {
       logoUrl: json['logourl'],
     );
   }
+
+  Password copyWith({
+    int? id,
+    String? site,
+    String? username,
+    String? password,
+    String? logoUrl,
+  }) {
+    return Password(
+      id: id ?? this.id,
+      site: site ?? this.site,
+      username: username ?? this.username,
+      password: password ?? this.password,
+      logoUrl: logoUrl ?? this.logoUrl,
+    );
+  }
 }

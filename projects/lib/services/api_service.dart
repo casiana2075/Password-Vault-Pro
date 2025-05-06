@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../Model/password.dart';
 import '../utils/EncryptionHelper.dart';
+import '../utils/SecureKeyManager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 
@@ -40,10 +41,9 @@ class ApiService {
 
   static Future<Password?> addPassword(String site, String username, String rawPassword, [String? logoUrl]) async {
     final token = await _getIdToken();
-    var userUID = FirebaseAuth.instance.currentUser?.uid;
 
-    final key = EncryptionHelper.generateKeyFromPassword(rawPassword, userUID!);
-    final encryptedPassword = EncryptionHelper.encryptText(rawPassword, key);
+    final aesKey = await SecureKeyManager.getOrCreateUserKey();
+    final encryptedPassword = EncryptionHelper.encryptText(rawPassword, aesKey);
 
     final response = await http.post(
       Uri.parse('$baseUrl/passwords'),
@@ -67,8 +67,18 @@ class ApiService {
     }
   }
 
-  static Future<bool> updatePassword(int id, String site, String username, String password, String logoUrl) async {
+
+  static Future<bool> updatePassword(
+      int id,
+      String site,
+      String username,
+      String newRawPassword,
+      String logoUrl
+      ) async {
     final token = await _getIdToken();
+    final aesKey = await SecureKeyManager.getOrCreateUserKey();
+    final encryptedPassword = EncryptionHelper.encryptText(newRawPassword, aesKey);
+
     final response = await http.put(
       Uri.parse('$baseUrl/passwords/$id'),
       headers: {
@@ -78,13 +88,14 @@ class ApiService {
       body: jsonEncode({
         'site': site,
         'username': username,
-        'password': password,
+        'password': encryptedPassword,
         'logoUrl': logoUrl,
       }),
     );
 
     return response.statusCode == 200;
   }
+
 
   static Future<Map<String, dynamic>?> createOrFetchUser() async {
     final token = await _getIdToken();

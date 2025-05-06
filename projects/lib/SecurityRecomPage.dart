@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:projects/Model/password.dart';
 import 'EditPasswordPage.dart';
 import 'package:projects/services/api_service.dart'; // needed for refetch
+import 'package:projects/utils/EncryptionHelper.dart';
+import 'package:projects/utils/SecureKeyManager.dart';
+
 
 class SecurityRecomPage extends StatefulWidget {
   final List<Password> passwords;
@@ -24,14 +27,7 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
   @override
   void initState() {
     super.initState();
-    _passwords = widget.passwords;
-  }
-
-  Future<void> _refreshPasswords() async {
-    final updatedPasswords = await ApiService.fetchPasswords();
-    setState(() {
-      _passwords = updatedPasswords;
-    });
+    _decryptPasswords(); // work with decrypted passwords
   }
 
   @override
@@ -149,4 +145,33 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
       ),
     );
   }
+
+  Future<void> _refreshPasswords() async {
+    final updatedPasswords = await ApiService.fetchPasswords();
+    final aesKey = await SecureKeyManager.getOrCreateUserKey();
+
+    final decryptedPasswords = updatedPasswords.map((p) {
+      final decryptedPw = EncryptionHelper.decryptText(p.password, aesKey);
+      return p.copyWith(password: decryptedPw);
+    }).toList();
+
+    setState(() {
+      _passwords = decryptedPasswords;
+    });
+  }
+
+  Future<void> _decryptPasswords() async {
+    final aesKey = await SecureKeyManager.getOrCreateUserKey();
+
+    final decryptedPasswords = widget.passwords.map((p) {
+      final decryptedPw = EncryptionHelper.decryptText(p.password, aesKey);
+      return p.copyWith(password: decryptedPw);
+    }).toList();
+
+    setState(() {
+      _passwords = decryptedPasswords;
+    });
+  }
+
+
 }

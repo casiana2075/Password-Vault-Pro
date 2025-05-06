@@ -9,7 +9,8 @@ import 'package:projects/LoginPage.dart';
 import 'package:projects/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../utils/EncryptionHelper.dart';
+import '../utils/SecureKeyManager.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -579,28 +580,47 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void copyPassword(BuildContext context, String password) {
-    if (password
-        .trim()
-        .isEmpty) {
+  void copyPassword(BuildContext context, String encryptedPassword) async {
+    try {
+      if (encryptedPassword.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Password is empty, nothing to copy."),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+
+      final aesKey = await SecureKeyManager.getOrCreateUserKey();
+      final decryptedPassword = EncryptionHelper.decryptText(encryptedPassword, aesKey);
+
+      await Clipboard.setData(ClipboardData(text: decryptedPassword));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Password is empty, nothing to copy."),
+          content: Text("Password copied to clipboard"),
           duration: Duration(seconds: 2),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // wait 30 seconds then clear clipboard
+      Future.delayed(const Duration(seconds: 30), () async {
+        final currentClipboard = await Clipboard.getData('text/plain');
+        if (currentClipboard?.text == decryptedPassword) {
+          await Clipboard.setData(const ClipboardData(text: ""));
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to decrypt password: $e"),
+          duration: const Duration(seconds: 3),
           backgroundColor: Colors.redAccent,
         ),
       );
-      return;
     }
-
-    Clipboard.setData(ClipboardData(text: password)).then((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Password copied to clipboard ✅"),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    });
   }
 
   void _filterPasswords(String query) {
