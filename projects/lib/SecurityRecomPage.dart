@@ -23,6 +23,7 @@ class SecurityRecomPage extends StatefulWidget {
 
 class _SecurityRecomPageState extends State<SecurityRecomPage> {
   late List<Password> _passwords;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -32,6 +33,34 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            "Security Recommendations",
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 1,
+          iconTheme: const IconThemeData(color: Colors.black87),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text("Loading..."),
+            ],
+          ),
+        ),
+      );
+    }
+
     final repeatedMap = <String, List<Password>>{};
     final List<Password> weakPasswords = [];
 
@@ -46,7 +75,6 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
 
       final isWeak = !(hasMinLength && hasLetter && hasDigit && hasSpecial);
       if (isWeak) weakPasswords.add(p);
-      print("PAROLA LUI ${p.username} ESTE ${p.password}");
     }
 
     final repeatedPasswords =
@@ -158,6 +186,10 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
   }
 
   Future<int> _refreshPasswords(int currentCount) async {
+    setState(() {
+      _isLoading = true; // set loading state during refresh
+    });
+
     final updatedPasswords = await ApiService.fetchPasswords();
     final aesKey = await SecureKeyManager.getOrCreateUserKey();
 
@@ -187,6 +219,7 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
 
     setState(() {
       _passwords = decryptedPasswords;
+      _isLoading = false; // clear loading state after decryption
     });
 
     return newSummaryCount; // Return the updated count
@@ -202,6 +235,7 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
 
     setState(() {
       _passwords = decryptedPasswords;
+      _isLoading = false; // clear loading state after decryption
     });
   }
 }
