@@ -207,28 +207,30 @@ class _AddModalState extends State<AddModal> {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: TextFormField(
         controller: _usernameController,
+        maxLength: 30,
         decoration: InputDecoration(
-            prefixIcon: Padding(
-              padding: EdgeInsets.fromLTRB(
-                  20, 5, 5, 5), // add padding to adjust icon
-              child: Icon(
-                icon,
-                color: Color.fromARGB(255, 82, 101, 120),
-              ),
+          counterText: "",
+          prefixIcon: Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 5, 5, 5), // add padding to adjust icon
+            child: Icon(
+              icon,
+              color: Color.fromARGB(255, 82, 101, 120),
             ),
-            filled: true,
-            contentPadding: EdgeInsets.all(16),
-            hintText: hintText,
-            hintStyle: TextStyle(
-                color: Color.fromARGB(255, 82, 101, 120), fontWeight: FontWeight.w500),
-            fillColor: Color.fromARGB(247, 232, 235, 237),
-            border: OutlineInputBorder(
-                borderSide: BorderSide(
-                  width: 0,
-                  style: BorderStyle.none,
-                ),
-                borderRadius: BorderRadius.circular(35))),
-        style: TextStyle(),
+          ),
+          filled: true,
+          contentPadding: EdgeInsets.all(16),
+          hintText: hintText,
+          hintStyle: TextStyle(
+              color: Color.fromARGB(255, 82, 101, 120), fontWeight: FontWeight.w500),
+          fillColor: Color.fromARGB(247, 232, 235, 237),
+          border: OutlineInputBorder(
+              borderSide: BorderSide(
+                width: 0,
+                style: BorderStyle.none,
+              ),
+              borderRadius: BorderRadius.circular(35))),
+         style: TextStyle(),
       ),
     );
   }
@@ -258,6 +260,7 @@ class _AddModalState extends State<AddModal> {
         children: [
           TextFormField(
             controller: _siteController,
+            maxLength: 50,
             decoration: InputDecoration(
               prefixIcon: Padding(
                 padding: EdgeInsets.fromLTRB(20, 5, 5, 5),

@@ -409,47 +409,53 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Profile row
-              Row(
-                children: [
-                  if (isInDeleteMode)
-                    Checkbox(
-                      value: selectedPasswords[password.id] ?? false,
-                      shape: const CircleBorder(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedPasswords[password.id] = value ?? false;
-                        });
-                      },
-                    ),
-                  logoBox(password),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(15.0, 0, 8, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _highlight(
-                          password.site,
-                          const TextStyle(
-                            color: Color.fromARGB(255, 22, 22, 22),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          context,
-                        ),
-                        const SizedBox(height: 4),
-                        _highlight(
-                            password.username,
-                            const TextStyle(
-                              color: Color.fromARGB(255, 39, 39, 39),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
+              Expanded(
+                child: Row(
+                  children: [
+                    if (isInDeleteMode)
+                      Checkbox(
+                        value: selectedPasswords[password.id] ?? false,
+                        shape: const CircleBorder(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedPasswords[password.id] = value ?? false;
+                          });
+                        },
+                      ),
+                    logoBox(password),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(15.0, 0, 8, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _highlight(
+                              password.site,
+                              const TextStyle(
+                                color: Color.fromARGB(255, 22, 22, 22),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                overflow: TextOverflow.ellipsis, // Add overflow handling
+                              ),
+                              context,
                             ),
-                            context
+                            const SizedBox(height: 4),
+                            _highlight(
+                                password.username,
+                                const TextStyle(
+                                  color: Color.fromARGB(255, 39, 39, 39),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                context
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               _hoverButton(
                   'assets/copy.svg', screenHeight, () {}, password.password),

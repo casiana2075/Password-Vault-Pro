@@ -50,9 +50,6 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenHeight = MediaQuery.of(context).size.height;
-    double screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -76,8 +73,8 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
               isLoadingLogos
                   ? const Center(child: CircularProgressIndicator())
                   : searchWebsiteField(),
-              _formHeading("Email"),
-              _formTextField("Enter email", Icons.email, emailController),
+              _formHeading("Username / Email"),
+              _formTextField("Enter username / email", Icons.email, emailController),
               _formHeading("Password"),
               isDecrypting
                   ? const Center(child: CircularProgressIndicator())
@@ -116,16 +113,54 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
                   backgroundColor: const WidgetStatePropertyAll(Color.fromARGB(255, 55, 114, 255)),
                 ),
                 onPressed: () async { // edit password data
+                  final site = websiteController.text.trim();
+                  final username = emailController.text.trim();
+                  final password = passwordController.text.trim();
+                  final logoUrl = logoUrlController.text.trim();
+
+                  //no empty fields
+                  if (site.isEmpty || username.isEmpty || password.isEmpty) {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (BuildContext context) {
+                        Future.delayed(Duration(seconds: 2), () {
+                          if (mounted) Navigator.of(context).pop();
+                        });
+                        return AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          content: Container(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Text(
+                              "⚠ Please fill in all fields ⚠",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          backgroundColor: Color.fromARGB(255, 50, 50, 50),
+                          elevation: 8,
+                          contentPadding: EdgeInsets.zero,
+                        );
+                      },
+                    );
+                    return;
+                  }
+
                   final updated = await ApiService.updatePassword(
                     widget.password.id,
-                    websiteController.text.trim(),
-                    emailController.text.trim(),
-                    passwordController.text.trim(),
-                    logoUrlController.text.trim(),
+                    site,
+                    username,
+                    password,
+                    logoUrl,
                   );
 
                   if (updated) {
-                    Navigator.pop(context, true); // signal to refresh homepage
+                    Navigator.pop(context, true);
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Failed to update password")),
@@ -207,7 +242,9 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: TextFormField(
         controller: controller,
+        maxLength: 30,
         decoration: InputDecoration(
+          counterText: "",
           prefixIcon: Padding(
             padding: const EdgeInsets.fromLTRB(20, 5, 5, 5),
             child: Icon(
@@ -258,7 +295,9 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
         children: [
           TextFormField(
             controller: websiteController,
+            maxLength: 50,
             decoration: InputDecoration(
+              counterText: "",
               prefixIcon: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 5, 5, 5),
                 child: Icon(

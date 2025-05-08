@@ -89,6 +89,7 @@ class _PasswordFieldState extends State<PasswordField> {
         controller: _controller,
         obscureText: _obscureText,
         readOnly: _readOnly,
+        maxLength: 30,
         onTap: () async {
           if (_readOnly && _obscureText) {
             await _authenticate();
