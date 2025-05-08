@@ -50,24 +50,39 @@ class _LoginPageState extends State<LoginPage> {
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  maxLength: 50,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.email_outlined),
                     hintText: "Email",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
                   ),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 10),
 
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
+                  maxLength: 50,
+                  keyboardType: TextInputType.visiblePassword,
+
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.lock_outline),
                     hintText: "Password",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
                   ),
                 ),
-                const SizedBox(height: 25),
+                if(_isLogin)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _showForgotPasswordDialog,
+                      child: Text(
+                        "Forgot your password?",
+                        style: GoogleFonts.poppins(color: Colors.blueAccent),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
 
                 _isLoading
                     ? const CircularProgressIndicator()
@@ -225,20 +240,21 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-
   Future<void> _signInWithGoogle() async {
-    if (mounted) {
-      setState(() => _isLoading = true);
-    }
+    if (mounted) setState(() => _isLoading = true);
+
+    final googleSignIn = GoogleSignIn();
 
     try {
-      final googleUser = await GoogleSignIn().signIn();
+      // Full disconnect, not just signOut
+      await googleSignIn.disconnect();
+      await googleSignIn.signOut();
+
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Google sign-in cancelled')),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google sign-in cancelled')),
+        );
         return;
       }
 
@@ -248,9 +264,8 @@ class _LoginPageState extends State<LoginPage> {
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCred = await FirebaseAuth.instance.signInWithCredential(credential);
 
-      // sync user with backend
       final userResponse = await ApiService.createOrFetchUser();
       if (userResponse != null && mounted) {
         Navigator.pushReplacementNamed(context, "/home");
@@ -258,21 +273,67 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception("Failed to sync user with backend.");
       }
     } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google sign-in failed: ${e.message ?? 'Unknown error'}')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google sign-in failed: ${e.message ?? 'Unknown error'}')),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google auth error: ${e.toString()}')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google auth error: ${e.toString()}')),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
+
+
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Reset Password"),
+          content: TextField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(hintText: "Enter your email"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final email = emailController.text.trim();
+                if (email.isEmpty || !email.contains("@")) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Enter a valid email")),
+                  );
+                  return;
+                }
+
+                try {
+                  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                  Navigator.of(context).pop(); // Close dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Password reset email sent")),
+                  );
+                } catch (e) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error: ${e.toString()}")),
+                  );
+                }
+              },
+              child: const Text("Send"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
 }

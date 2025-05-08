@@ -11,6 +11,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/EncryptionHelper.dart';
 import '../utils/SecureKeyManager.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -163,34 +165,44 @@ class _HomePageState extends State<HomePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row( // Profile row
-            children: [
-              circleAvatarRound(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Hello ${_getUserName()}",
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+          Expanded( // Wrap the profile row in Expanded
+            child: Row( // Profile row
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    _showProfileMenu(context);
+                  },
+                  child: circleAvatarRound(),
+                ),
+              Expanded( // Add Expanded here to allow text to shrink
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Hello ${_getUserName()}",
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis, // Add overflow handling
+                        maxLines: 1, // Limit to one line
                       ),
-                    ),
-                    Text(
-                      getGreeting(),
-                      style: const TextStyle(
-                        color: Color(0xFFBABABA),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
+                      Text(
+                        getGreeting(),
+                        style: const TextStyle(
+                          color: Color(0xFFBABABA),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ],
+            ],),
           ),
           Row(
             children: [
@@ -199,15 +211,6 @@ class _HomePageState extends State<HomePage> {
                 _hoverButton(cancelAsset, screenHeight, () => deletePasswordsState())
               else
                 _hoverButton(deleteAsset, screenHeight, () => deletePasswordsState()),
-
-              //logout button
-              IconButton(
-                icon: Icon(Icons.logout, color: Colors.black54),
-                tooltip: "Logout",
-                onPressed: () {
-                  logout(); // Call the method
-                },
-              ),
             ],
           ),
         ],
@@ -632,6 +635,72 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _showProfileMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.logout, color: Colors.blue),
+                title: Text('Logout', style: TextStyle(color: Colors.blue)),
+                onTap: () {
+                  Navigator.pop(context);
+                  logout();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_forever, color: Colors.red),
+                title: Text('Delete Account', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteAccount(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmDeleteAccount(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Delete Account"),
+          content: Text(
+            "This will permanently delete your account and all your saved passwords. This action cannot be undone. Are you sure?",
+          ),
+          actions: [
+            TextButton(
+              child: Text("Cancel"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text(
+                "Delete",
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deleteAccount(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _getUserName() {
     // Get the currently logged-in user
     final User? user = FirebaseAuth.instance.currentUser;
@@ -652,6 +721,98 @@ class _HomePageState extends State<HomePage> {
 
     // Return nothing if the user is not logged in or has no email
     return "";
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text("Deleting account..."),
+              ],
+            ),
+          );
+        },
+      );
+
+      // Get current user
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        Navigator.of(context).pop(); // Close loading dialog
+        throw Exception("No user signed in");
+      }
+
+      final String uid = user.uid;
+
+      // Delete all passwords for this user from local database
+      await _deleteAllUserPasswords(uid);
+
+      // Delete user account from Firebase
+      await user.delete();
+
+      // Clear shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // If user signed in with Google, sign out from there too
+      await GoogleSignIn().signOut();
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Navigate to login page
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => LoginPage()),
+              (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      Navigator.of(context, rootNavigator: true).pop();
+
+      // Handle specific error cases
+      String errorMessage = "Failed to delete account: ${e.toString()}";
+
+      // Check for Firebase auth errors
+      if (e is FirebaseAuthException) {
+        if (e.code == 'requires-recent-login') {
+          errorMessage = "For security, please log out and log in again before deleting your account.";
+          // Perform logout
+          await logout();
+        }
+      }
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    }
+  }
+
+  // function to delete all user passwords from local DB when deleting an acc
+  Future<void> _deleteAllUserPasswords(String uid) async {
+    try {
+      // Fetch all passwords first
+      List<Password> passwords = await ApiService.fetchPasswords();
+
+      // Delete each password using the API
+      for (Password password in passwords) {
+        await ApiService.deletePassword(password.id);
+      }
+
+      print("Successfully deleted all user passwords");
+    } catch (e) {
+      print("Error deleting passwords: $e");
+      //continue with account deletion even if password deletion fails
+    }
   }
 
   Future<dynamic> bottomModal(BuildContext context) {
@@ -711,17 +872,20 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> logout() async {
     try {
-      // Firebase logout
+      // firebase logout
       await FirebaseAuth.instance.signOut();
 
-      // Clear shared preferences
+      // google SignOut
+      await GoogleSignIn().signOut();
+
+      // clear shared preferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
-      // Navigate to login page
+      // navigate to login page
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => LoginPage()), // Change if needed
+          MaterialPageRoute(builder: (_) => LoginPage()),
               (Route<dynamic> route) => false,
         );
       }
