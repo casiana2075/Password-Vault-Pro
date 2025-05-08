@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:projects/Model/password.dart';
 import 'EditPasswordPage.dart';
@@ -8,8 +9,7 @@ import 'package:projects/utils/SecureKeyManager.dart';
 
 class SecurityRecomPage extends StatefulWidget {
   final List<Password> passwords;
-
-  final void Function()? onUpdated;
+  final void Function(int)? onUpdated; // Update to accept an int parameter
 
   const SecurityRecomPage({
     super.key,
@@ -27,7 +27,7 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
   @override
   void initState() {
     super.initState();
-    _decryptPasswords(); // work with decrypted passwords
+    _decryptPasswords();
   }
 
   @override
@@ -46,10 +46,13 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
 
       final isWeak = !(hasMinLength && hasLetter && hasDigit && hasSpecial);
       if (isWeak) weakPasswords.add(p);
+      print("PAROLA LUI ${p.username} ESTE ${p.password}");
     }
 
     final repeatedPasswords =
     repeatedMap.values.where((list) => list.length > 1).toList();
+
+    final summaryCount = repeatedPasswords.length + weakPasswords.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,9 +67,18 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black87),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (widget.onUpdated != null) {
+              widget.onUpdated!(summaryCount); // Pass summaryCount when navigating back
+            }
+            Navigator.pop(context);
+          },
+        ),
       ),
       body: RefreshIndicator(
-        onRefresh: _refreshPasswords,
+        onRefresh: () => _refreshPasswords(summaryCount),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: ListView(
@@ -116,10 +128,9 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
                       );
 
                       if (updated == true) {
-                        await _refreshPasswords();
-
+                        final newCount = await _refreshPasswords(summaryCount);
                         if (widget.onUpdated != null) {
-                          widget.onUpdated!(); // call the callback to refresh homepage
+                          widget.onUpdated!(newCount); // Pass updated summaryCount
                         }
 
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -146,7 +157,7 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
     );
   }
 
-  Future<void> _refreshPasswords() async {
+  Future<int> _refreshPasswords(int currentCount) async {
     final updatedPasswords = await ApiService.fetchPasswords();
     final aesKey = await SecureKeyManager.getOrCreateUserKey();
 
@@ -155,9 +166,30 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
       return p.copyWith(password: decryptedPw);
     }).toList();
 
+    // Recalculate summaryCount
+    final repeatedMap = <String, List<Password>>{};
+    final List<Password> weakPasswords = [];
+
+    for (var p in decryptedPasswords) {
+      repeatedMap.putIfAbsent(p.password, () => []).add(p);
+      final pw = p.password;
+      final hasMinLength = pw.length >= 8;
+      final hasLetter = pw.contains(RegExp(r'[A-Za-z]'));
+      final hasDigit = pw.contains(RegExp(r'\d'));
+      final hasSpecial = pw.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+      final isWeak = !(hasMinLength && hasLetter && hasDigit && hasSpecial);
+      if (isWeak) weakPasswords.add(p);
+    }
+
+    final repeatedPasswords =
+    repeatedMap.values.where((list) => list.length > 1).toList();
+    final newSummaryCount = repeatedPasswords.length + weakPasswords.length;
+
     setState(() {
       _passwords = decryptedPasswords;
     });
+
+    return newSummaryCount; // Return the updated count
   }
 
   Future<void> _decryptPasswords() async {
@@ -172,6 +204,4 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
       _passwords = decryptedPasswords;
     });
   }
-
-
 }

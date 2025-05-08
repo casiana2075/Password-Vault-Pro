@@ -30,6 +30,7 @@ class _HomePageState extends State<HomePage> {
 
   static bool isInDeleteMode = false;
   bool isLoading = true;
+  int summaryCount = 0; // store the summary count
 
   @override
   void initState() {
@@ -46,7 +47,6 @@ class _HomePageState extends State<HomePage> {
     final String editAsset = 'assets/edit.svg';
     final String cancelAsset = 'assets/cancel.svg';
 
-    final summary = getSecuritySummary(_allPasswords);
 
     double screenHeight = MediaQuery
         .of(context)
@@ -60,7 +60,7 @@ class _HomePageState extends State<HomePage> {
               profilePicAddDeleteIcons(
                   plusAsset, deleteAsset, cancelAsset, screenHeight, context),
               searchBar("Search Password", _searchController, _filterPasswords),
-              securityRecommendations(lockAsset, summary['count']),
+              securityRecommendations(lockAsset, summaryCount),
               Padding(
                 padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
                 child: Row(
@@ -296,7 +296,7 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: GestureDetector(
-        onTapDown: (details) {}, // for additional actions
+        onTapDown: (details) {},
         child: InkWell(
           borderRadius: BorderRadius.circular(35),
           splashColor: Colors.black12,
@@ -306,9 +306,11 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(
                 builder: (context) => SecurityRecomPage(
                   passwords: _allPasswords,
-                  onUpdated: () async {
-                    await loadPasswords(); // re-fetch updated data
-                    setState(() {});       // refresh homepage UI
+                  onUpdated: (int newCount) async {
+                    await loadPasswords(); // Re-fetch passwords
+                    setState(() {
+                      summaryCount = newCount; // Update summaryCount
+                    });
                   },
                 ),
               ),
@@ -355,7 +357,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const Spacer(),
                 Text(
-                  "$count", //var number of recommendations
+                  "$count",
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -363,8 +365,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(width: 3),
-                const Icon(
-                    Icons.arrow_forward_ios, size: 15, color: Colors.black),
+                const Icon(Icons.arrow_forward_ios, size: 15, color: Colors.black),
               ],
             ),
           ),
@@ -854,10 +855,38 @@ class _HomePageState extends State<HomePage> {
   Future<void> loadPasswords() async {
     try {
       final fetched = await ApiService.fetchPasswords();
-      if (mounted) { // currently at homepage
+      // Calculate initial summaryCount
+      final repeatedMap = <String, List<Password>>{};
+      final List<Password> weakPasswords = [];
+      final aesKey = await SecureKeyManager.getOrCreateUserKey();
+
+      // Decrypt passwords for analysis
+      final decryptedPasswords = fetched.map((p) {
+        final decryptedPw = EncryptionHelper.decryptText(p.password, aesKey);
+        return p.copyWith(password: decryptedPw);
+      }).toList();
+
+      for (var p in decryptedPasswords) {
+        repeatedMap.putIfAbsent(p.password, () => []).add(p);
+        final pw = p.password;
+        final hasMinLength = pw.length >= 8;
+        final hasLetter = pw.contains(RegExp(r'[A-Za-z]'));
+        final hasDigit = pw.contains(RegExp(r'\d'));
+        final hasSpecial = pw.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+        final isWeak = !(hasMinLength && hasLetter && hasDigit && hasSpecial);
+        if (isWeak) weakPasswords.add(p);
+      }
+
+      final repeatedPasswords =
+      repeatedMap.values.where((list) => list.length > 1).toList();
+      final newSummaryCount = repeatedPasswords.length + weakPasswords.length;
+
+      if (mounted) {
         setState(() {
-          _allPasswords = fetched;
+          _allPasswords = fetched; // Store encrypted passwords
           _filteredPasswords = fetched;
+          summaryCount = newSummaryCount; // Initialize summaryCount
+          isLoading = false;
         });
       }
     } catch (e) {
@@ -901,30 +930,6 @@ class _HomePageState extends State<HomePage> {
         SnackBar(content: Text("Logout failed: ${e.toString()}")),
       );
     }
-  }
-
-  Map<String, dynamic> getSecuritySummary(List<Password> passwords) {
-    final Map<String, List<String>> repeatedMap = {};
-    final List<Password> weakList = [];
-
-    for (var p in passwords) {
-      repeatedMap.putIfAbsent(p.password, () => []).add(p.site);
-
-      final pw = p.password;
-      final hasMinLength = pw.length >= 8;
-      final hasLetter = pw.contains(RegExp(r'[A-Za-z]'));
-      final hasDigit = pw.contains(RegExp(r'\d'));
-      final hasSpecial = pw.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
-      final isWeak = !(hasMinLength && hasLetter && hasDigit && hasSpecial);
-      if (isWeak) weakList.add(p);
-    }
-
-    final repeated = repeatedMap..removeWhere((k, v) => v.length < 2);
-    return {
-      'repeated': repeated,
-      'weak': weakList,
-      'count': repeated.length + weakList.length,
-    };
   }
 
 }
