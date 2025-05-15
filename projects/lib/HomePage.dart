@@ -731,6 +731,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _deleteAccount(BuildContext context) async {
+    // Store the NavigatorState to safely manage navigation
+    final navigator = Navigator.of(context, rootNavigator: true);
+
     try {
       // Show loading indicator
       showDialog(
@@ -752,7 +755,7 @@ class _HomePageState extends State<HomePage> {
       // Get current user
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        Navigator.of(context).pop(); // Close loading dialog
+        navigator.pop(); // Close loading dialog
         throw Exception("No user signed in");
       }
 
@@ -768,22 +771,28 @@ class _HomePageState extends State<HomePage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
-      // If user signed in with Google, sign out from there too
-      await GoogleSignIn().signOut();
+      // Disconnect and sign out from Google if the user signed in with Google
+      final googleSignIn = GoogleSignIn();
+      try {
+        await googleSignIn.signOut(); // Sign out to end the session
+        await googleSignIn.disconnect(); // Fully disconnect from Google account
+      } catch (e) {
+        print("Error during Google disconnect/sign-out: $e"); // Log for debugging
+      }
 
       // Close loading dialog
-      Navigator.of(context).pop();
+      navigator.pop();
 
       // Navigate to login page
       if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
+        navigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => LoginPage()),
               (Route<dynamic> route) => false,
         );
       }
     } catch (e) {
       // Close loading dialog if open
-      Navigator.of(context, rootNavigator: true).pop();
+      navigator.pop();
 
       // Handle specific error cases
       String errorMessage = "Failed to delete account: ${e.toString()}";

@@ -199,29 +199,39 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         throw Exception("Failed to sync user with backend.");
       }
-
     } on FirebaseAuthException catch (e) {
-      String message = "An error occurred";
+      String message;
 
       switch (e.code) {
         case 'user-not-found':
-          message = 'No account found with that email.';
+          message = 'No account found with this email.';
           break;
         case 'wrong-password':
-          message = 'Incorrect password.';
+          message = 'Incorrect password. Please try again.';
           break;
         case 'email-already-in-use':
-          message = 'That email is already registered.';
+          message = 'This email is already registered.';
           break;
         case 'invalid-email':
-          message = 'Invalid email address.';
+          message = 'Please enter a valid email address.';
           break;
         case 'weak-password':
-          message = 'Password is too weak.';
+          message = 'Password is too weak. Use at least 6 characters.';
           break;
         case 'too-many-requests':
           message = 'Too many attempts. Please try again later.';
           break;
+        case 'invalid-credential':
+          message = 'Invalid email or password.';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled.';
+          break;
+        case 'operation-not-allowed':
+          message = 'This operation is not allowed. Contact support.';
+          break;
+        default:
+          message = 'Authentication error: ${e.message ?? 'Please try again.'}';
       }
 
       if (mounted) {
@@ -246,8 +256,7 @@ class _LoginPageState extends State<LoginPage> {
     final googleSignIn = GoogleSignIn();
 
     try {
-      // Full disconnect, not just signOut
-      await googleSignIn.disconnect();
+      //sign out befor a new sign in
       await googleSignIn.signOut();
 
       final googleUser = await googleSignIn.signIn();
@@ -284,7 +293,6 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
 
   void _showForgotPasswordDialog() {
     final emailController = TextEditingController();
@@ -334,6 +342,5 @@ class _LoginPageState extends State<LoginPage> {
       },
     );
   }
-
 
 }
