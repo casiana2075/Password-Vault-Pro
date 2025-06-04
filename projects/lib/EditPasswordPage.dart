@@ -4,8 +4,6 @@ import 'package:projects/PasswordField.dart';
 import 'package:projects/services/api_service.dart';
 import 'package:projects/utils/password_generator.dart';
 
-
-
 class EditPasswordPage extends StatefulWidget {
   final Password password;
 
@@ -23,7 +21,6 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
 
   Map<String, String> _websiteLogos = {};
   bool isLoadingLogos = true;
-  bool isDecrypting = true;
 
   @override
   void initState() {
@@ -31,9 +28,7 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
     websiteController = TextEditingController(text: widget.password.site);
     emailController = TextEditingController(text: widget.password.username);
     logoUrlController = TextEditingController(text: widget.password.logoUrl);
-
-    // decrypt password async and injecting into UI
-    decryptAndSetPassword();
+    passwordController = TextEditingController(text: widget.password.password);
 
     loadWebsiteLogos();
   }
@@ -75,9 +70,7 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
               _formHeading("Username / Email"),
               _formTextField("Enter username / email", Icons.email, emailController),
               _formHeading("Password"),
-              isDecrypting
-                  ? const Center(child: CircularProgressIndicator())
-                  : PasswordField(
+              PasswordField(
                 hintText: "Enter password",
                 icon: Icons.lock_outline,
                 controller: passwordController,
@@ -358,24 +351,6 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
         ],
       ),
     );
-  }
-
-  Future<void> decryptAndSetPassword() async {
-    try {
-      final aesKey = await SecureKeyManager.getOrCreateUserKey();
-      final decrypted = EncryptionHelper.decryptText(widget.password.password, aesKey);
-
-      setState(() {
-        passwordController = TextEditingController(text: decrypted);
-        isDecrypting = false;
-      });
-    } catch (e) {
-      print('Failed to decrypt password: $e');
-      setState(() {
-        passwordController = TextEditingController(); // fallback
-        isDecrypting = false;
-      });
-    }
   }
 
   Future<void> loadWebsiteLogos() async {

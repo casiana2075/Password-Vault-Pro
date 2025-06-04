@@ -4,7 +4,6 @@ import 'EditPasswordPage.dart';
 import 'package:projects/services/api_service.dart'; // needed for refetch
 
 
-
 class SecurityRecomPage extends StatefulWidget {
   final List<Password> passwords;
   final void Function(int)? onUpdated; // Update to accept an int parameter
@@ -21,16 +20,19 @@ class SecurityRecomPage extends StatefulWidget {
 
 class _SecurityRecomPageState extends State<SecurityRecomPage> {
   late List<Password> _passwords;
-  bool _isLoading = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _decryptPasswords();
+    // Assign widget.passwords to _passwords immediately as they are pre-decrypted.
+    _passwords = widget.passwords;
   }
 
   @override
   Widget build(BuildContext context) {
+    // We only show the loading indicator if _isLoading becomes true during a refresh
+    // or an update operation. Not on initial build.
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
@@ -62,7 +64,7 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
     final repeatedMap = <String, List<Password>>{};
     final List<Password> weakPasswords = [];
 
-    for (var p in _passwords) {
+    for (var p in _passwords) { // Use _passwords, which is now initialized
       repeatedMap.putIfAbsent(p.password, () => []).add(p);
 
       final pw = p.password;
@@ -185,22 +187,17 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
 
   Future<int> _refreshPasswords(int currentCount) async {
     setState(() {
-      _isLoading = true; // set loading state during refresh
+      _isLoading = true;
     });
 
-    final updatedPasswords = await ApiService.fetchPasswords();
-    final aesKey = await SecureKeyManager.getOrCreateUserKey();
-
-    final decryptedPasswords = updatedPasswords.map((p) {
-      final decryptedPw = EncryptionHelper.decryptText(p.password, aesKey);
-      return p.copyWith(password: decryptedPw);
-    }).toList();
+    final updatedPasswords = await ApiService.fetchPasswords(); // Fetches decrypted passwords
 
     // Recalculate summaryCount
     final repeatedMap = <String, List<Password>>{};
     final List<Password> weakPasswords = [];
 
-    for (var p in decryptedPasswords) {
+    // Passwords are already decrypted
+    for (var p in updatedPasswords) { // Use updatedPasswords directly
       repeatedMap.putIfAbsent(p.password, () => []).add(p);
       final pw = p.password;
       final hasMinLength = pw.length >= 8;
@@ -216,24 +213,11 @@ class _SecurityRecomPageState extends State<SecurityRecomPage> {
     final newSummaryCount = repeatedPasswords.length + weakPasswords.length;
 
     setState(() {
-      _passwords = decryptedPasswords;
-      _isLoading = false; // clear loading state after decryption
+      _passwords = updatedPasswords; // Store decrypted passwords
+      _isLoading = false; // Set to false after refreshing
     });
 
-    return newSummaryCount; // Return the updated count
+    return newSummaryCount;
   }
 
-  Future<void> _decryptPasswords() async {
-    final aesKey = await SecureKeyManager.getOrCreateUserKey();
-
-    final decryptedPasswords = widget.passwords.map((p) {
-      final decryptedPw = EncryptionHelper.decryptText(p.password, aesKey);
-      return p.copyWith(password: decryptedPw);
-    }).toList();
-
-    setState(() {
-      _passwords = decryptedPasswords;
-      _isLoading = false; // clear loading state after decryption
-    });
-  }
 }

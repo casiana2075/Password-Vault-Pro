@@ -31,6 +31,7 @@ class _HomePageState extends State<HomePage> {
   bool isLoading = true;
   int summaryCount = 0; // store the summary count
 
+
   @override
   void initState() {
     super.initState();
@@ -589,9 +590,9 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void copyPassword(BuildContext context, String encryptedPassword) async {
+  void copyPassword(BuildContext context, String decryptedPassword) async {
     try {
-      if (encryptedPassword.trim().isEmpty) {
+      if (decryptedPassword.trim().isEmpty) { // Using decryptedPassword directly
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Password is empty, nothing to copy."),
@@ -602,9 +603,7 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
-      final aesKey = await SecureKeyManager.getOrCreateUserKey();
-      final decryptedPassword = EncryptionHelper.decryptText(encryptedPassword, aesKey);
-
+      // No decryption needed here, use the already decrypted password
       await Clipboard.setData(ClipboardData(text: decryptedPassword));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -614,7 +613,6 @@ class _HomePageState extends State<HomePage> {
         ),
       );
 
-      // wait 30 seconds then clear clipboard
       Future.delayed(const Duration(seconds: 30), () async {
         final currentClipboard = await Clipboard.getData('text/plain');
         if (currentClipboard?.text == decryptedPassword) {
@@ -624,7 +622,7 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Failed to decrypt password: $e"),
+          content: Text("Failed to copy password: $e"), // Renamed print message
           duration: const Duration(seconds: 3),
           backgroundColor: Colors.redAccent,
         ),
@@ -730,7 +728,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _deleteAccount(BuildContext context) async {
-    // Store the NavigatorState to safely manage navigation
     final navigator = Navigator.of(context, rootNavigator: true);
 
     try {
@@ -739,7 +736,7 @@ class _HomePageState extends State<HomePage> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return AlertDialog(
+          return const AlertDialog( // Use const for AlertDialog content if it's static
             content: Row(
               children: [
                 CircularProgressIndicator(),
@@ -751,20 +748,20 @@ class _HomePageState extends State<HomePage> {
         },
       );
 
-      // Get current user
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        navigator.pop(); // Close loading dialog
+        navigator.pop();
         throw Exception("No user signed in");
       }
 
       final String uid = user.uid;
 
-      // Delete all passwords for this user from local database
-      await _deleteAllUserPasswords(uid);
+      // First, try to delete the Firebase user account
+      // This will throw `requires-recent-login` if reauthentication is needed.
+      await user.delete(); // Attempt immediate deletion
 
-      // Delete user account from Firebase
-      await user.delete();
+      // If successful, proceed with local data cleanup
+      await _deleteAllUserPasswords(uid);
 
       // Clear shared preferences
       final prefs = await SharedPreferences.getInstance();
@@ -773,42 +770,26 @@ class _HomePageState extends State<HomePage> {
       // Disconnect and sign out from Google if the user signed in with Google
       final googleSignIn = GoogleSignIn();
       try {
-        await googleSignIn.signOut(); // Sign out to end the session
-        await googleSignIn.disconnect(); // Fully disconnect from Google account
+        await googleSignIn.signOut();
+        await googleSignIn.disconnect();
       } catch (e) {
-        print("Error during Google disconnect/sign-out: $e"); // Log for debugging
+        print("Error during Google disconnect/sign-out: $e");
       }
 
-      // Close loading dialog
-      navigator.pop();
+      navigator.pop(); // Close loading dialog
 
-      // Navigate to login page
       if (context.mounted) {
         navigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => LoginPage()),
               (Route<dynamic> route) => false,
         );
       }
+    } on FirebaseAuthException catch (e) { // Catch FirebaseAuthException specifically
+      navigator.pop(); // Close loading dialog if open
+
     } catch (e) {
-      // Close loading dialog if open
-      navigator.pop();
-
-      // Handle specific error cases
+      navigator.pop(); // Close loading dialog if open
       String errorMessage = "Failed to delete account: ${e.toString()}";
-
-      // Check for Firebase auth errors
-      if (e is FirebaseAuthException) {
-        if (e.code == 'requires-recent-login') {
-          errorMessage = "For security, please log out and log in again before deleting your account.";
-          // Perform logout
-          await logout();
-        }
-      }
-
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
     }
   }
 
@@ -862,19 +843,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadPasswords() async {
     try {
-      final fetched = await ApiService.fetchPasswords();
+      final fetched = await ApiService.fetchPasswords(); // Fetches decrypted passwords
       // Calculate initial summaryCount
       final repeatedMap = <String, List<Password>>{};
       final List<Password> weakPasswords = [];
-      final aesKey = await SecureKeyManager.getOrCreateUserKey();
 
-      // Decrypt passwords for analysis
-      final decryptedPasswords = fetched.map((p) {
-        final decryptedPw = EncryptionHelper.decryptText(p.password, aesKey);
-        return p.copyWith(password: decryptedPw);
-      }).toList();
-
-      for (var p in decryptedPasswords) {
+      // Passwords are already decrypted from the API call
+      for (var p in fetched) { // Use 'fetched' directly
         repeatedMap.putIfAbsent(p.password, () => []).add(p);
         final pw = p.password;
         final hasMinLength = pw.length >= 8;
@@ -891,9 +866,9 @@ class _HomePageState extends State<HomePage> {
 
       if (mounted) {
         setState(() {
-          _allPasswords = fetched; // Store encrypted passwords
+          _allPasswords = fetched; // Store decrypted passwords
           _filteredPasswords = fetched;
-          summaryCount = newSummaryCount; // Initialize summaryCount
+          summaryCount = newSummaryCount;
           isLoading = false;
         });
       }

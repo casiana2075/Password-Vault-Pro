@@ -3,8 +3,6 @@ import 'dart:io'; // For HttpClient
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart'; // for IOClient
 import '../Model/password.dart';
-import '../utils/EncryptionHelper.dart';
-import '../utils/SecureKeyManager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
@@ -49,8 +47,6 @@ class ApiService {
 
   static Future<Password?> addPassword(String site, String username, String rawPassword, [String? logoUrl]) async {
     final token = await _getIdToken();
-    final aesKey = await SecureKeyManager.getOrCreateUserKey();
-    final encryptedPassword = EncryptionHelper.encryptText(rawPassword, aesKey);
 
     final response = await _client.post(
       Uri.parse('$baseUrl/passwords'),
@@ -61,7 +57,7 @@ class ApiService {
       body: jsonEncode({
         'site': site,
         'username': username,
-        'password': encryptedPassword,
+        'password': rawPassword,
         'logoUrl': logoUrl,
       }),
     );
@@ -77,8 +73,6 @@ class ApiService {
   static Future<bool> updatePassword(
       int id, String site, String username, String newRawPassword, String logoUrl) async {
     final token = await _getIdToken();
-    final aesKey = await SecureKeyManager.getOrCreateUserKey();
-    final encryptedPassword = EncryptionHelper.encryptText(newRawPassword, aesKey);
 
     final response = await _client.put(
       Uri.parse('$baseUrl/passwords/$id'),
@@ -89,7 +83,7 @@ class ApiService {
       body: jsonEncode({
         'site': site,
         'username': username,
-        'password': encryptedPassword,
+        'password': newRawPassword,
         'logoUrl': logoUrl,
       }),
     );
