@@ -43,3 +43,10 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+
+// ar fi bine ca: the key is always deleted on logout or rotated every week
+
+//acum vezi cu zeroknowledge proof cum sa adaugi asa ceva in cod
+//vezi sa se poata loga doar cu email-uri existente -> delete the sign in with username+password(mom il las sa am mai multi useri pt testare)
+

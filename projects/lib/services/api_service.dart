@@ -1,13 +1,21 @@
 import 'dart:convert';
+import 'dart:io'; // For HttpClient
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart'; // for IOClient
 import '../Model/password.dart';
 import '../utils/EncryptionHelper.dart';
 import '../utils/SecureKeyManager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:3000'; // for emulator(10.0.2.2:3000)
+  static const String baseUrl = 'https://10.0.2.2:3000'; // HTTPS for emulator
+
+  // Create a custom HTTP client that allows self-signed certificates
+  static final http.Client _client = () {
+    final httpClient = HttpClient()
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true; // Accept self-signed certificates
+    return IOClient(httpClient); // Use IOClient to wrap HttpClient
+  }();
 
   static Future<String?> _getIdToken() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -16,7 +24,7 @@ class ApiService {
 
   static Future<List<Password>> fetchPasswords() async {
     final token = await _getIdToken();
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('$baseUrl/passwords'),
       headers: {'Authorization': token ?? ''},
     );
@@ -25,13 +33,13 @@ class ApiService {
       List<dynamic> body = jsonDecode(response.body);
       return body.map((json) => Password.fromJson(json)).toList();
     } else {
-      throw Exception('Failed to load passwords');
+      throw Exception('Failed to load passwords: ${response.statusCode}');
     }
   }
 
   static Future<bool> deletePassword(int id) async {
     final token = await _getIdToken();
-    final response = await http.delete(
+    final response = await _client.delete(
       Uri.parse('$baseUrl/passwords/$id'),
       headers: {'Authorization': token ?? ''},
     );
@@ -41,21 +49,20 @@ class ApiService {
 
   static Future<Password?> addPassword(String site, String username, String rawPassword, [String? logoUrl]) async {
     final token = await _getIdToken();
-
     final aesKey = await SecureKeyManager.getOrCreateUserKey();
     final encryptedPassword = EncryptionHelper.encryptText(rawPassword, aesKey);
 
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('$baseUrl/passwords'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': token ?? '',
       },
       body: jsonEncode({
-        "site": site,
-        "username": username,
-        "password": encryptedPassword,
-        "logoUrl": logoUrl,
+        'site': site,
+        'username': username,
+        'password': encryptedPassword,
+        'logoUrl': logoUrl,
       }),
     );
 
@@ -67,19 +74,13 @@ class ApiService {
     }
   }
 
-
   static Future<bool> updatePassword(
-      int id,
-      String site,
-      String username,
-      String newRawPassword,
-      String logoUrl
-      ) async {
+      int id, String site, String username, String newRawPassword, String logoUrl) async {
     final token = await _getIdToken();
     final aesKey = await SecureKeyManager.getOrCreateUserKey();
     final encryptedPassword = EncryptionHelper.encryptText(newRawPassword, aesKey);
 
-    final response = await http.put(
+    final response = await _client.put(
       Uri.parse('$baseUrl/passwords/$id'),
       headers: {
         'Content-Type': 'application/json',
@@ -96,14 +97,16 @@ class ApiService {
     return response.statusCode == 200;
   }
 
-
   static Future<Map<String, dynamic>?> createOrFetchUser() async {
     final token = await _getIdToken();
     final url = Uri.parse('$baseUrl/users');
 
-    final response = await http.get(url, headers: {
-      'Authorization': token ?? '',
-    });
+    final response = await _client.get(
+      url,
+      headers: {
+        'Authorization': token ?? '',
+      },
+    );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
@@ -112,7 +115,6 @@ class ApiService {
       return null;
     }
   }
-
 
   static Future<Map<String, String>> fetchWebsiteLogos() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -125,7 +127,7 @@ class ApiService {
       throw Exception('Failed to retrieve ID token');
     }
     final url = Uri.parse('$baseUrl/logos');
-    final response = await http.get(
+    final response = await _client.get(
       url,
       headers: {
         'Authorization': idToken,
@@ -144,4 +146,3 @@ class ApiService {
     }
   }
 }
-
