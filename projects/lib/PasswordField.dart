@@ -6,12 +6,17 @@ class PasswordField extends StatefulWidget {
   final String hintText;
   final IconData icon;
   final TextEditingController? controller;
+  // This callback is for the "Generate strong password" button
+  final Function(String)? onPasswordGenerated;
+  final Function(String)? onChanged;
 
   const PasswordField({
     super.key,
     required this.hintText,
     required this.icon,
     this.controller,
+    this.onPasswordGenerated,
+    this.onChanged,
   });
 
   @override
@@ -31,13 +36,16 @@ class _PasswordFieldState extends State<PasswordField> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
 
-    // If password exists, start in protected mode
+    // The initial state of _readOnly and _obscureText for AddModal:
+    // If the controller is empty (which it is for AddModal),
+    // it allows typing directly and starts with text visible for user convenience.
+    // If you prefer to start obscured, change `_obscureText = false` to `true`.
     if (_controller.text.trim().isNotEmpty) {
       _readOnly = true;
       _obscureText = true;
     } else {
       _readOnly = false;
-      _obscureText = false;
+      _obscureText = false; // Allows immediate typing, password is visible. Change to true if you want it obscured by default.
     }
   }
 
@@ -94,6 +102,10 @@ class _PasswordFieldState extends State<PasswordField> {
           if (_readOnly && _obscureText) {
             await _authenticate();
           }
+        },
+        //Pass the onChanged callback from widget to TextFormField
+        onChanged: (text) {
+          widget.onChanged?.call(text); // Call the provided onChanged callback
         },
         decoration: InputDecoration(
           prefixIcon: Padding(

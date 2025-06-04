@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projects/services/api_service.dart';
 import 'package:projects/utils/authenticateUserBiometrically.dart';
+import 'package:projects/utils/password_strength_analyzer.dart';
 import 'PasswordField.dart';
 import 'package:projects/utils/password_generator.dart';
 
@@ -20,22 +21,26 @@ class _AddModalState extends State<AddModal> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _logoUrlController = TextEditingController();
 
-
   Map<String, String> _websiteLogos = {}; // all website logos available
-
   bool isLogosLoading = true;
+  PasswordStrength _currentPasswordStrength = PasswordStrength.veryWeak;
+
 
   @override
   void initState() {
     super.initState();
     loadWebsiteLogos();
+    _passwordController.addListener(_onPasswordChanged); // Add listener
+    _onPasswordChanged(); // Initial check if password exists
   }
 
   @override void dispose() {
     _siteController.dispose();
     _usernameController.dispose();
+    _passwordController.removeListener(_onPasswordChanged);
     _passwordController.dispose();
     _logoUrlController.dispose();
+
     super.dispose();
   }
 
@@ -85,12 +90,48 @@ class _AddModalState extends State<AddModal> {
                 hintText: "Enter Password",
                 icon: Icons.lock_outline,
                 controller: _passwordController,
+                onPasswordGenerated: (generatedPassword) {
+                  setState(() {
+                    _passwordController.text = generatedPassword;
+                    _onPasswordChanged(); // Update strength after generation
+                  });
+                },
+              ),
+              // Password strength indicator
+              Padding(
+                padding: const EdgeInsets.fromLTRB(30, 8.0, 30, 8.0),
+                child: Row(
+                  children: [
+                    // Wrap Text in SizedBox for a fixed width
+                    SizedBox(
+                      width: 90,
+                      child: Text(
+                        '${PasswordStrengthAnalyzer.getStrengthText(_currentPasswordStrength)}',
+                        style: TextStyle(
+                          color: PasswordStrengthAnalyzer.getStrengthColor(_currentPasswordStrength),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      child: LinearProgressIndicator(
+                        value: _currentPasswordStrength.index / (PasswordStrength.values.length - 1),
+                        backgroundColor: Colors.grey[300],
+                        color: PasswordStrengthAnalyzer.getStrengthColor(_currentPasswordStrength),
+                        minHeight: 10,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               TextButton.icon(
                 onPressed: () {
                   final generated = generateStrongPassword();
                   setState(() {
                     _passwordController.text = generated;
+                    _onPasswordChanged();
                   });
                 },
                 icon: Icon(Icons.refresh, size: 16),
@@ -338,5 +379,11 @@ class _AddModalState extends State<AddModal> {
         isLogosLoading = false; // even if error, allow UI to proceed
       });
     }
+  }
+
+  void _onPasswordChanged() {
+    setState(() {
+      _currentPasswordStrength = PasswordStrengthAnalyzer.analyze(_passwordController.text);
+    });
   }
 }
