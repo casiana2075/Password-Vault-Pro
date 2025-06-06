@@ -1,4 +1,3 @@
-// server.js (updated sections)
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db'); // Still needed for password storage
