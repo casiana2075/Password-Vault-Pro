@@ -184,6 +184,6 @@ const credentials = { key: privateKey, cert: certificate };
 // Create HTTPS server
 const httpsServer = https.createServer(credentials, app);
 
-httpsServer.listen(3000, () => {
-  console.log('API running at https://localhost:3000');
+httpsServer.listen(3001, () => {
+  console.log('API running at https://localhost:3001');
 });

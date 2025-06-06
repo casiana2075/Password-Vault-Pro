@@ -106,7 +106,7 @@ class _AddModalState extends State<AddModal> {
                     SizedBox(
                       width: 90,
                       child: Text(
-                        '${PasswordStrengthAnalyzer.getStrengthText(_currentPasswordStrength)}',
+                        PasswordStrengthAnalyzer.getStrengthText(_currentPasswordStrength),
                         style: TextStyle(
                           color: PasswordStrengthAnalyzer.getStrengthColor(_currentPasswordStrength),
                           fontWeight: FontWeight.bold,
@@ -200,7 +200,7 @@ class _AddModalState extends State<AddModal> {
                         );
                       },
                     );
-                    if (!mounted) return;
+                    return;
                   }
 
                   //check the user biometrics

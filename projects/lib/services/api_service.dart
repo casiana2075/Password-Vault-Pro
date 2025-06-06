@@ -4,9 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart'; // for IOClient
 import '../Model/password.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:crypto/crypto.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://10.0.2.2:3000'; // HTTPS for emulator
+  static const String baseUrl = 'https://10.0.2.2:3001'; // HTTPS for emulator
 
   // Create a custom HTTP client that allows self-signed certificates
   static final http.Client _client = () {
@@ -138,5 +139,92 @@ class ApiService {
     } else {
       throw Exception('Failed to fetch logos: ${response.statusCode}');
     }
+  }
+
+  static Future<int> checkPasswordForBreach(String password) async {
+    if (password.isEmpty) return 0;
+
+    // 1. Hash the password using SHA-1
+    final bytes = utf8.encode(password); // data being hashed
+    final digest = sha1.convert(bytes); // SHA-1 hash
+
+    // Convert hash to uppercase hex string
+    final String sha1Hash = digest.toString().toUpperCase();
+
+    // 2. Take the first 5 characters as the prefix
+    final String prefix = sha1Hash.substring(0, 5);
+    final String suffix = sha1Hash.substring(5);
+
+    final String apiUrl = 'https://api.pwnedpasswords.com/range/$prefix';
+
+    try {
+      // Use the default http client for HIBP, not your custom _client
+      final response = await http.get(Uri.parse(apiUrl));
+
+      if (response.statusCode == 200) {
+        // 3. The API returns a list of suffixes and their counts, one per line
+        final String responseBody = response.body;
+        final List<String> lines = responseBody.split('\r\n');
+
+        // 4. Search locally for the full hash's suffix
+        for (String line in lines) {
+          final parts = line.split(':');
+          if (parts.length == 2) {
+            final String retrievedSuffix = parts[0];
+            final int count = int.tryParse(parts[1]) ?? 0;
+
+            if (retrievedSuffix == suffix) {
+              // 5. Found a match! This password has been pwned.
+              return count; // Return the number of times it was found
+            }
+          }
+        }
+        // If loop completes, suffix not found for this prefix
+        return 0;
+      } else if (response.statusCode == 400) {
+        print('HIBP API Bad Request (likely invalid prefix): $prefix');
+        return 0; // Or throw an error if you want to handle it specifically
+      } else {
+        print('HIBP API error: ${response.statusCode} - ${response.body}');
+        return 0; // Treat as not found if API error
+      }
+    } catch (e) {
+      print('Error checking password with HIBP: $e');
+      return 0; // Treat as not found on network/other error
+    }
+  }
+
+  // method to check a list of passwords
+  static Future<List<Password>> checkPasswordsForBreaches(List<Password> passwords) async {
+    // Create a deep copy to avoid modifying the original list directly while iterating
+    List<Password> passwordsToCheck = passwords.map((p) => p.copyWith(
+      id: p.id,
+      site: p.site,
+      username: p.username,
+      password: p.password, // This will be the plain-text password
+      logoUrl: p.logoUrl,
+      isPwned: p.isPwned,
+      pwnCount: p.pwnCount,
+    )).toList();
+
+
+    for (var p in passwordsToCheck) {
+      if (p.password.isNotEmpty) { // Only check non-empty passwords
+        // Introduce a small delay to avoid hitting HIBP rate limits too quickly
+        await Future.delayed(Duration(milliseconds: 50));
+        final pwnCount = await checkPasswordForBreach(p.password);
+        if (pwnCount > 0) {
+          p.isPwned = true;
+          p.pwnCount = pwnCount;
+        } else {
+          p.isPwned = false;
+          p.pwnCount = 0;
+        }
+      } else {
+        p.isPwned = false;
+        p.pwnCount = 0;
+      }
+    }
+    return passwordsToCheck; // Return the list with updated pwned statuses
   }
 }

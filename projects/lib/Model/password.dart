@@ -2,8 +2,10 @@ class Password {
   final int id;
   final String site;
   final String username;
-  final String password;
+  String password;
   final String logoUrl;
+  bool isPwned;
+  int pwnCount;
 
   Password({
     required this.id,
@@ -11,6 +13,8 @@ class Password {
     required this.username,
     required this.password,
     required this.logoUrl,
+    this.isPwned = false, // Default to false
+    this.pwnCount = 0,
   });
 
   factory Password.fromJson(Map<String, dynamic> json) {
@@ -20,6 +24,8 @@ class Password {
       username: json['username'],
       password: json['password'],
       logoUrl: json['logourl'],
+      isPwned: json['isPwned'] ?? false, // Handle if not present in JSON
+      pwnCount: json['pwnCount'] ?? 0,    // Handle if not present in JSON
     );
   }
 
@@ -29,6 +35,8 @@ class Password {
     String? username,
     String? password,
     String? logoUrl,
+    bool? isPwned,
+    int? pwnCount,
   }) {
     return Password(
       id: id ?? this.id,
@@ -36,6 +44,8 @@ class Password {
       username: username ?? this.username,
       password: password ?? this.password,
       logoUrl: logoUrl ?? this.logoUrl,
+      isPwned: isPwned ?? this.isPwned,
+      pwnCount: pwnCount ?? this.pwnCount,
     );
   }
 }
