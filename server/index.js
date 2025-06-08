@@ -1,11 +1,11 @@
 const express = require('express');
 const cors = require('cors');
-const pool = require('./db'); // Still needed for password storage
+const pool = require('./db');
 const admin = require('firebase-admin');
 const serviceAccount = require('./serviceAccountKey.json');
 const https = require('https');
 const fs = require('fs');
-const EncryptionHelper = require('./encryptionHelper'); // Import the new helper
+const EncryptionHelper = require('./encryptionHelper'); // Import the helper
 
 const app = express();
 app.use(cors());
@@ -60,8 +60,15 @@ app.get('/passwords', async (req, res) => {
 
     // Decrypt passwords before sending to frontend
     const decryptedPasswords = result.rows.map(row => {
-      // Only decrypt if there's an actual encrypted password string
-      const decryptedPw = row.password ? EncryptionHelper.decryptText(row.password, aesKey) : '';
+      let decryptedPw = '';
+      if (row.password) {
+        try {
+          decryptedPw = EncryptionHelper.decryptText(row.password, aesKey, req.firebaseUid);
+        } catch (e) {
+          console.warn('Decryption failed, possible legacy format for row ID:', row.id, e.message);
+          decryptedPw = ''; // Fallback to empty string or handle legacy differently
+        }
+      }
       return { ...row, password: decryptedPw }; // Replace encrypted with decrypted
     });
 
@@ -77,7 +84,7 @@ app.post('/passwords', async (req, res) => {
   const { site, username, password: rawPassword, logoUrl } = req.body;
   try {
     const aesKey = await getUserAESKey(req.firebaseUid); // Get the user's AES key from Firestore
-    const encryptedPassword = EncryptionHelper.encryptText(rawPassword, aesKey); // Encrypt on backend
+    const encryptedPassword = EncryptionHelper.encryptText(rawPassword, aesKey, req.firebaseUid); // Encrypt on backend
 
     const result = await pool.query(
       'INSERT INTO passwords (site, username, password, logourl, firebase_uid) VALUES ($1, $2, $3, $4, $5) RETURNING *',
@@ -96,7 +103,7 @@ app.put('/passwords/:id', async (req, res) => {
   const { site, username, password: newRawPassword, logoUrl } = req.body;
   try {
     const aesKey = await getUserAESKey(req.firebaseUid); // Get the user's AES key from Firestore
-    const encryptedPassword = EncryptionHelper.encryptText(newRawPassword, aesKey); // Encrypt on backend
+    const encryptedPassword = EncryptionHelper.encryptText(newRawPassword, aesKey, req.firebaseUid); // Encrypt on backend
 
     const result = await pool.query(
       'UPDATE passwords SET site = $1, username = $2, password = $3, logourl = $4 WHERE id = $5 AND firebase_uid = $6 RETURNING *',
