@@ -3,6 +3,7 @@ import 'dart:io'; // For HttpClient
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart'; // for IOClient
 import '../Model/password.dart';
+import '../Model/credit_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypto/crypto.dart';
 
@@ -228,7 +229,6 @@ class ApiService {
     return passwordsToCheck; // Return the list with updated pwned statuses
   }
 
-
   static Future<bool> deleteUser(String uid) async {
     final token = await _getIdToken();
     final response = await _client.delete(
@@ -237,5 +237,103 @@ class ApiService {
     );
 
     return response.statusCode == 200;
+  }
+
+  //  Methods for Credit Cards -------------
+  static Future<List<CreditCard>> fetchCreditCards() async {
+    final token = await _getIdToken();
+    final response = await _client.get(
+      Uri.parse('$baseUrl/credit_cards'),
+      headers: {'Authorization': token ?? ''},
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((json) => CreditCard.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load credit cards: ${response.statusCode} ${response.body}');
+    }
+  }
+
+  static Future<bool> addCreditCard({
+    required String cardHolderName,
+    required String cardNumber,
+    required String expiryDate,
+    required String cvv,
+    String? notes,
+    String? type,
+  }) async {
+    final token = await _getIdToken();
+    final response = await _client.post(
+      Uri.parse('$baseUrl/credit_cards'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ?? '',
+      },
+      body: jsonEncode({
+        'card_holder_name': cardHolderName,
+        'card_number': cardNumber,
+        'expiry_date': expiryDate,
+        'cvv': cvv,
+        'notes': notes,
+        'type': type,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return true;
+    } else {
+      print('Failed to add credit card: ${response.statusCode} ${response.body}');
+      return false;
+    }
+  }
+
+  static Future<CreditCard?> updateCreditCard({
+    required int id,
+    required String cardHolderName,
+    required String cardNumber,
+    required String expiryDate,
+    required String cvv,
+    String? notes,
+    String? type,
+  }) async {
+    final token = await _getIdToken();
+    final response = await _client.put(
+      Uri.parse('$baseUrl/credit_cards/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ?? '',
+      },
+      body: jsonEncode({
+        'card_holder_name': cardHolderName,
+        'card_number': cardNumber,
+        'expiry_date': expiryDate,
+        'cvv': cvv,
+        'notes': notes,
+        'type': type,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return CreditCard.fromJson(jsonDecode(response.body));
+    } else {
+      print('Failed to update credit card: ${response.statusCode} ${response.body}');
+      return null;
+    }
+  }
+
+  static Future<bool> deleteCreditCard(int id) async {
+    final token = await _getIdToken();
+    final response = await _client.delete(
+      Uri.parse('$baseUrl/credit_cards/$id'),
+      headers: {'Authorization': token ?? ''},
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      print('Failed to delete credit card: ${response.statusCode} ${response.body}');
+      return false;
+    }
   }
 }

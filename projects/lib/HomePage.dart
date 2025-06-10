@@ -6,6 +6,8 @@ import 'package:projects/Model/password.dart';
 import 'package:projects/SecurityRecomPage.dart';
 import 'package:projects/EditPasswordPage.dart';
 import 'package:projects/LoginPage.dart';
+import 'package:projects/CreditCardsPage.dart'; // Import CreditCardsPage
+import 'package:projects/AddCreditCardModal.dart'; // Import the new credit card modal
 import 'package:projects/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +23,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0; // To manage selected tab/page between passwords and cards
   Map<int, bool> selectedPasswords = {};
 
   List<Password> _allPasswords = [];
@@ -31,12 +34,42 @@ class _HomePageState extends State<HomePage> {
   bool isLoading = true;
   int summaryCount = 0; // store the summary count
 
+  // Define a PageStorageBucket for maintaining scroll positions across tabs
+  final PageStorageBucket _bucket = PageStorageBucket();
 
   @override
   void initState() {
     super.initState();
     loadPasswords();
   }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+      // If switching back to passwords, clear search and delete mode if active
+      if (_selectedIndex == 0) {
+        _searchController.clear();
+        _filterPasswords(''); // Reset filter
+        if (isInDeleteMode) {
+          isInDeleteMode = false;
+          selectedPasswords.clear();
+        }
+        // No need to loadPasswords() here if it's already done in initState
+        // and handled by the AddModal's onAdded callback.
+        // It might be needed if passwords can change outside of this app.
+      }
+      // If switching to credit cards, clear any password-specific states
+      if (_selectedIndex == 1) {
+        _searchController.clear();
+        _filterPasswords(''); // Clear password filter
+        if (isInDeleteMode) {
+          isInDeleteMode = false;
+          selectedPasswords.clear();
+        }
+      }
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -54,60 +87,100 @@ class _HomePageState extends State<HomePage> {
         .height;
     return SafeArea(
       child: Scaffold(
-        body: SingleChildScrollView(
-          child: Column(
+        body: PageStorage( // Use PageStorage to preserve state of each tab
+          bucket: _bucket,
+          child: IndexedStack(
+            index: _selectedIndex,
             children: [
-              profilePicAddDeleteIcons(
-                  plusAsset, deleteAsset, cancelAsset, screenHeight, context),
-              searchBar("Search Password", _searchController, _filterPasswords),
-              securityRecommendations(lockAsset, summaryCount),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
-                child: Row(
+              // Passwords Tab
+              SingleChildScrollView(
+                key: const PageStorageKey<String>('PasswordPage'), // Unique key for passwords
+                child: Column(
                   children: [
-                    Text(
-                      "Passwords",
-                      style: TextStyle(
-                          fontSize: 25, fontWeight: FontWeight.w600),
+                    profilePicAddDeleteIcons(
+                        plusAsset, deleteAsset, cancelAsset, screenHeight, context),
+                    searchBar("Search Password", _searchController, _filterPasswords),
+                    securityRecommendations(lockAsset, summaryCount),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(25, 25, 0, 5),
+                      child: Row(
+                        children: [
+                          Text(
+                            "Passwords",
+                            style: TextStyle(
+                                fontSize: 25, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
                     ),
+                    _filteredPasswords.isEmpty && !isLoading ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 40),
+                        child: Text(
+                          _allPasswords.isEmpty
+                              ? "🔐 No passwords stored yet!"
+                              : "🤔 No matches found.",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    )
+                        : isLoading
+                        ? const Center(child: Padding(
+                      padding: EdgeInsets.all(50.0),
+                      child: CircularProgressIndicator(),
+                    ))
+                        : ListView.builder(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(), // optional
+                      itemCount: _filteredPasswords.length,
+                      itemBuilder: (context, index) {
+                        final password = _filteredPasswords[index];
+                        return passwordSection(password, context, index);
+                      },
+                    ),
+                    if (selectedPasswords.containsValue(true) && isInDeleteMode)
+                      ElevatedButton(
+                        onPressed: () => deleteSelectedPasswords(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text("Delete Selected"),
+                      ),
                   ],
                 ),
               ),
-              _filteredPasswords.isEmpty ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 40),
-                  child: Text(
-                    _allPasswords.isEmpty
-                        ? "🔐 No passwords stored yet!"
-                        : "🤔 No matches found.",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              )
-                  : ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(), // optional
-                itemCount: _filteredPasswords.length,
-                itemBuilder: (context, index) {
-                  final password = _filteredPasswords[index];
-                  return passwordSection(password, context, index);
+              // Credit Cards Tab
+              CreditCardsPage(
+                key: const PageStorageKey<String>('CreditCardsPage'), // Unique key for credit cards
+                onCreditCardAdded: () {
+                  // This callback will be triggered when a credit card is added
+                  // You might want to refresh the credit card list in CreditCardsPage itself
+                  // or trigger a refresh here if CreditCardsPage doesn't manage its own state fully.
+                  // For now, assuming CreditCardsPage handles its own data loading.
                 },
               ),
-              if (selectedPasswords.containsValue(true) && isInDeleteMode)
-                ElevatedButton(
-                  onPressed: () => deleteSelectedPasswords(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text("Delete Selected"),
-                ),
             ],
           ),
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(Icons.lock),
+              label: 'Passwords',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.credit_card),
+              label: 'Credit Cards',
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          selectedItemColor: Theme.of(context).primaryColor,
+          onTap: _onItemTapped,
         ),
       ),
     );
@@ -174,49 +247,70 @@ class _HomePageState extends State<HomePage> {
                   },
                   child: circleAvatarRound(),
                 ),
-              Expanded( // Add Expanded here to allow text to shrink
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Hello ${_getUserName()}",
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                Expanded( // Add Expanded here to allow text to shrink
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Hello ${_getUserName()}",
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis, // Add overflow handling
+                          maxLines: 1, // Limit to one line
                         ),
-                        overflow: TextOverflow.ellipsis, // Add overflow handling
-                        maxLines: 1, // Limit to one line
-                      ),
-                      Text(
-                        getGreeting(),
-                        style: const TextStyle(
-                          color: Color(0xFFBABABA),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                        Text(
+                          getGreeting(),
+                          style: const TextStyle(
+                            color: Color(0xFFBABABA),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],),
+              ],),
           ),
-          Row(
-            children: [
-              _hoverButton(plusAsset, screenHeight, () => bottomModal(context)),
-              if (isInDeleteMode)
-                _hoverButton(cancelAsset, screenHeight, () => deletePasswordsState())
-              else
-                _hoverButton(deleteAsset, screenHeight, () => deletePasswordsState()),
-            ],
-          ),
+          // Conditionally render add/delete icons based on selected tab
+          if (_selectedIndex == 0) // Only for Passwords tab
+            Row(
+              children: [
+                _hoverButton(plusAsset, screenHeight, () => _showAddModal()), // Modified for dynamic modal
+                if (isInDeleteMode)
+                  _hoverButton(cancelAsset, screenHeight, () => deletePasswordsState())
+                else
+                  _hoverButton(deleteAsset, screenHeight, () => deletePasswordsState()),
+              ],
+            )
+          else if (_selectedIndex == 1) // Only for Credit Cards tab
+            Row(
+              children: [
+                _hoverButton(plusAsset, screenHeight, () => _showAddModal()), // Modified for dynamic modal
+                // Add delete functionality for credit cards if needed
+                // _hoverButton(deleteAsset, screenHeight, () => deleteCreditCardsState()),
+              ],
+            ),
         ],
       ),
     );
   }
+
+  // Refactored to handle showing different add modals
+  void _showAddModal() {
+    if (_selectedIndex == 0) { // Passwords tab
+      bottomModal(context); // Existing AddModal for passwords
+    } else if (_selectedIndex == 1) { // Credit Cards tab
+      // Implement or call a method to show AddCreditCardModal
+      _showAddCreditCardModal(context);
+    }
+  }
+
 
   Widget _hoverButton(String asset, double screenHeight, VoidCallback onTap,
       [String? password]) {
@@ -229,10 +323,13 @@ class _HomePageState extends State<HomePage> {
             splashColor: Colors.blue[200],
             onTap: () {
               if (asset.contains('plus')) {
-                bottomModal(context);
+                _showAddModal(); // Use the refactored method
               }
               else if (asset.contains('delete') || asset.contains('cancel')) {
-                deletePasswordsState();
+                // Only for passwords tab delete logic
+                if (_selectedIndex == 0) {
+                  deletePasswordsState();
+                }
               }
               else if (asset.contains('copy') && password != null) {
                 copyPassword(context, password);
@@ -264,6 +361,9 @@ class _HomePageState extends State<HomePage> {
 
   Widget searchBar(String hintText, TextEditingController controller,
       Function(String) onChanged) {
+    // Only show search bar for passwords tab
+    if (_selectedIndex != 0) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: TextFormField(
@@ -293,6 +393,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget securityRecommendations(String icon, int count) {
+    // Only show security recommendations for passwords tab
+    if (_selectedIndex != 0) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: GestureDetector(
@@ -523,8 +626,8 @@ class _HomePageState extends State<HomePage> {
           TextSpan(text: source.substring(matches + query.length)),
         ],
       ), textScaler: TextScaler.linear(MediaQuery
-          .of(context)
-          .textScaleFactor),
+        .of(context)
+        .textScaleFactor),
     );
   }
 
@@ -833,6 +936,42 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
+
+  // New method for showing AddCreditCardModal
+  Future<dynamic> _showAddCreditCardModal(BuildContext context) {
+    return showModalBottomSheet(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20.0),
+      ),
+      isScrollControlled: true,
+      context: context,
+      builder: (BuildContext bc) {
+        return Wrap(
+          children: <Widget>[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(25.0),
+                  topRight: Radius.circular(25.0),
+                ),
+              ),
+              child: AddCreditCardModal( // Assuming this widget exists
+                onAdded: () {
+                  // This callback will be triggered when a credit card is added.
+                  // You might want to refresh the credit card list in CreditCardsPage
+                  // by calling a method on CreditCardsPage's state, or by passing
+                  // a callback to CreditCardsPage from here.
+                  // For simplicity, for now, we'll assume CreditCardsPage will reload itself.
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   Future<void> loadPasswords() async {
     try {

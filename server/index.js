@@ -198,6 +198,160 @@ app.delete('/passwords/:id', async (req, res) => {
 });
 
 
+// Get all credit cards for the authenticated user
+app.get('/credit_cards', async (req, res) => {
+  const firebaseUid = req.firebaseUid; // From auth middleware
+
+  try {
+    const userAESKeyDoc = await db.collection('users').doc(firebaseUid).get();
+    if (!userAESKeyDoc.exists || !userAESKeyDoc.data()?.aesKey) {
+      return res.status(400).json({ error: 'User AES key not found.' });
+    }
+    const userAESKey = userAESKeyDoc.data().aesKey;
+
+    const result = await pool.query(
+      'SELECT * FROM credit_cards WHERE firebase_uid = $1 ORDER BY id DESC',
+      [firebaseUid]
+    );
+
+    const decryptedCards = result.rows.map(card => {
+      try {
+        return {
+          id: card.id,
+          card_holder_name: EncryptionHelper.decryptText(card.card_holder_name_encrypted, userAESKey, firebaseUid),
+          card_number: EncryptionHelper.decryptText(card.card_number_encrypted, userAESKey, firebaseUid),
+          expiry_date: EncryptionHelper.decryptText(card.expiry_date_encrypted, userAESKey, firebaseUid),
+          cvv: EncryptionHelper.decryptText(card.cvv_encrypted, userAESKey, firebaseUid),
+          notes: card.notes_encrypted ? EncryptionHelper.decryptText(card.notes_encrypted, userAESKey, firebaseUid) : null,
+          type: card.type_encrypted ? EncryptionHelper.decryptText(card.type_encrypted, userAESKey, firebaseUid) : null,
+        };
+      } catch (decryptError) {
+        console.error('Decryption error for card ID:', card.id, decryptError);
+        // Handle corrupted data, e.g., skip this card or return a placeholder
+        return { id: card.id, error: 'Decryption failed for this card.' };
+      }
+    }).filter(card => !card.error); // Filter out cards with decryption errors for the client
+
+    res.json(decryptedCards);
+  } catch (err) {
+    console.error('DB Fetch Credit Cards Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a new credit card
+app.post('/credit_cards', async (req, res) => {
+  const { card_holder_name, card_number, expiry_date, cvv, notes, type } = req.body;
+  const firebaseUid = req.firebaseUid; // From auth middleware
+
+  if (!card_holder_name || !card_number || !expiry_date || !cvv) {
+    return res.status(400).json({ error: 'Missing required card fields' });
+  }
+
+  try {
+    const userAESKeyDoc = await db.collection('users').doc(firebaseUid).get();
+    if (!userAESKeyDoc.exists || !userAESKeyDoc.data()?.aesKey) {
+      return res.status(400).json({ error: 'User AES key not found.' });
+    }
+    const userAESKey = userAESKeyDoc.data().aesKey;
+
+    const encryptedCardHolderName = EncryptionHelper.encryptText(card_holder_name, userAESKey, firebaseUid);
+    const encryptedCardNumber = EncryptionHelper.encryptText(card_number, userAESKey, firebaseUid);
+    const encryptedExpiryDate = EncryptionHelper.encryptText(expiry_date, userAESKey, firebaseUid);
+    const encryptedCvv = EncryptionHelper.encryptText(cvv, userAESKey, firebaseUid);
+    const encryptedNotes = notes ? EncryptionHelper.encryptText(notes, userAESKey, firebaseUid) : null;
+    const encryptedType = type ? EncryptionHelper.encryptText(type, userAESKey, firebaseUid) : null;
+
+
+    const result = await pool.query(
+      `INSERT INTO credit_cards (firebase_uid, card_holder_name_encrypted, card_number_encrypted, expiry_date_encrypted, cvv_encrypted, notes_encrypted, type_encrypted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [firebaseUid, encryptedCardHolderName, encryptedCardNumber, encryptedExpiryDate, encryptedCvv, encryptedNotes, encryptedType]
+    );
+    res.status(201).json(result.rows[0]); // Return the newly added (encrypted) card data
+  } catch (err) {
+    console.error('DB Add Credit Card Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update an existing credit card
+app.put('/credit_cards/:id', async (req, res) => {
+  const { id } = req.params;
+  const { card_holder_name, card_number, expiry_date, cvv, notes, type } = req.body;
+  const firebaseUid = req.firebaseUid;
+
+  if (!card_holder_name || !card_number || !expiry_date || !cvv) {
+    return res.status(400).json({ error: 'Missing required card fields' });
+  }
+
+  try {
+    const userAESKeyDoc = await db.collection('users').doc(firebaseUid).get();
+    if (!userAESKeyDoc.exists || !userAESKeyDoc.data()?.aesKey) {
+      return res.status(400).json({ error: 'User AES key not found.' });
+    }
+    const userAESKey = userAESKeyDoc.data().aesKey;
+
+    const encryptedCardHolderName = EncryptionHelper.encryptText(card_holder_name, userAESKey, firebaseUid);
+    const encryptedCardNumber = EncryptionHelper.encryptText(card_number, userAESKey, firebaseUid);
+    const encryptedExpiryDate = EncryptionHelper.encryptText(expiry_date, userAESKey, firebaseUid);
+    const encryptedCvv = EncryptionHelper.encryptText(cvv, userAESKey, firebaseUid);
+    const encryptedNotes = notes ? EncryptionHelper.encryptText(notes, userAESKey, firebaseUid) : null;
+    const encryptedType = type ? EncryptionHelper.encryptText(type, userAESKey, firebaseUid) : null;
+
+
+    const result = await pool.query(
+      `UPDATE credit_cards
+       SET card_holder_name_encrypted = $1, card_number_encrypted = $2, expiry_date_encrypted = $3, cvv_encrypted = $4, notes_encrypted = $5, type_encrypted = $6
+       WHERE id = $7 AND firebase_uid = $8 RETURNING *`,
+      [encryptedCardHolderName, encryptedCardNumber, encryptedExpiryDate, encryptedCvv, encryptedNotes, encryptedType, id, firebaseUid]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Credit card not found or not owned by user' });
+    }
+
+    // Decrypt and return the updated card
+    const updatedCard = result.rows[0];
+    const decryptedUpdatedCard = {
+      id: updatedCard.id,
+      card_holder_name: EncryptionHelper.decryptText(updatedCard.card_holder_name_encrypted, userAESKey, firebaseUid),
+      card_number: EncryptionHelper.decryptText(updatedCard.card_number_encrypted, userAESKey, firebaseUid),
+      expiry_date: EncryptionHelper.decryptText(updatedCard.expiry_date_encrypted, userAESKey, firebaseUid),
+      cvv: EncryptionHelper.decryptText(updatedCard.cvv_encrypted, userAESKey, firebaseUid),
+      notes: updatedCard.notes_encrypted ? EncryptionHelper.decryptText(updatedCard.notes_encrypted, userAESKey, firebaseUid) : null,
+      type: updatedCard.type_encrypted ? EncryptionHelper.decryptText(updatedCard.type_encrypted, userAESKey, firebaseUid) : null,
+    };
+    res.json(decryptedUpdatedCard);
+  } catch (err) {
+    console.error('DB Update Credit Card Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a credit card
+app.delete('/credit_cards/:id', async (req, res) => {
+  const { id } = req.params;
+  const firebaseUid = req.firebaseUid;
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM credit_cards WHERE id = $1 AND firebase_uid = $2',
+      [id, firebaseUid]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Credit card not found or not owned by user' });
+    }
+    res.status(200).json({ message: 'Credit card deleted successfully' });
+  } catch (err) {
+    console.error('DB Delete Credit Card Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
 // Fetch website logos
 app.get('/logos', async (req, res) => {
   try {
