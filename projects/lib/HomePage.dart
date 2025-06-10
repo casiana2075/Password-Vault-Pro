@@ -731,21 +731,19 @@ class _HomePageState extends State<HomePage> {
     final navigator = Navigator.of(context, rootNavigator: true);
 
     try {
-      // Show loading indicator
+      // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const AlertDialog( // Use const for AlertDialog content if it's static
-            content: Row(
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 20),
-                Text("Deleting account..."),
-              ],
-            ),
-          );
-        },
+        builder: (_) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text("Deleting account..."),
+            ],
+          ),
+        ),
       );
 
       final user = FirebaseAuth.instance.currentUser;
@@ -756,60 +754,55 @@ class _HomePageState extends State<HomePage> {
 
       final String uid = user.uid;
 
-      // First, try to delete the Firebase user account
-      // This will throw `requires-recent-login` if reauthentication is needed.
-      await user.delete(); // Attempt immediate deletion
+      // Delete from backend first (this will delete passwords + user in DB)
+      final backendDeleted = await ApiService.deleteUser(uid);
+      if (!backendDeleted) {
+        navigator.pop();
+        throw Exception("Failed to delete user from server");
+      }
 
-      // If successful, proceed with local data cleanup
-      await _deleteAllUserPasswords(uid);
+      // Delete Firebase account
+      await user.delete();
 
       // Clear shared preferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
-      // Disconnect and sign out from Google if the user signed in with Google
-      final googleSignIn = GoogleSignIn();
+      // Sign out/disconnect from Google if needed
       try {
+        final googleSignIn = GoogleSignIn();
         await googleSignIn.signOut();
         await googleSignIn.disconnect();
       } catch (e) {
-        print("Error during Google disconnect/sign-out: $e");
+        print("Google sign out error: $e");
       }
 
       navigator.pop(); // Close loading dialog
 
+      // Navigate to login
       if (context.mounted) {
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => LoginPage()),
-              (Route<dynamic> route) => false,
-        );
-      }
-    } on FirebaseAuthException catch (e) { // Catch FirebaseAuthException specifically
-      navigator.pop(); // Close loading dialog if open
+        navigator.pop(); // Close the loading dialog
 
+        // Add a short delay to allow dialog closing to complete
+        await Future.delayed(Duration(milliseconds: 100));
+
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+                (Route<dynamic> route) => false,
+          );
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      navigator.pop();
+      // Handle re-authentication required etc.
+      print("Firebase error: $e");
     } catch (e) {
-      navigator.pop(); // Close loading dialog if open
-      String errorMessage = "Failed to delete account: ${e.toString()}";
+      navigator.pop();
+      print("Error deleting account: $e");
     }
   }
 
-  // function to delete all user passwords from local DB when deleting an acc
-  Future<void> _deleteAllUserPasswords(String uid) async {
-    try {
-      // Fetch all passwords first
-      List<Password> passwords = await ApiService.fetchPasswords();
-
-      // Delete each password using the API
-      for (Password password in passwords) {
-        await ApiService.deletePassword(password.id);
-      }
-
-      print("Successfully deleted all user passwords");
-    } catch (e) {
-      print("Error deleting passwords: $e");
-      //continue with account deletion even if password deletion fails
-    }
-  }
 
   Future<dynamic> bottomModal(BuildContext context) {
     return showModalBottomSheet(

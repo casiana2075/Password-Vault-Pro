@@ -227,4 +227,15 @@ class ApiService {
     }
     return passwordsToCheck; // Return the list with updated pwned statuses
   }
+
+
+  static Future<bool> deleteUser(String uid) async {
+    final token = await _getIdToken();
+    final response = await _client.delete(
+      Uri.parse('$baseUrl/users/$uid'),
+      headers: {'Authorization': token ?? ''},
+    );
+
+    return response.statusCode == 200;
+  }
 }

@@ -122,8 +122,7 @@ app.put('/passwords/:id', async (req, res) => {
 // GET/CREATE current user (Login handler) - adjust this as the AES key is now in Firestore
 app.get('/users', async (req, res) => {
   try {
-    // We still fetch/create in your local DB if you need user-specific data there
-    // beyond just linking passwords. If not, you could simplify this.
+
     const result = await pool.query('SELECT * FROM users WHERE firebase_uid = $1', [req.firebaseUid]);
 
     if (result.rows.length === 0) {
@@ -148,6 +147,34 @@ app.get('/users', async (req, res) => {
   }
 });
 
+// DELETE user and their associated data
+app.delete('/users/:uid', async (req, res) => {
+  const firebaseUid = req.firebaseUid;
+  const { uid } = req.params;
+
+  // Only allow a user to delete their own account
+  if (firebaseUid !== uid) {
+    return res.status(403).json({ message: 'Forbidden: UID mismatch' });
+  }
+
+  try {
+    // First delete all passwords
+    await pool.query('DELETE FROM passwords WHERE firebase_uid = $1', [firebaseUid]);
+
+    // Then delete the user
+    const result = await pool.query('DELETE FROM users WHERE firebase_uid = $1', [firebaseUid]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({ message: 'User and associated data deleted successfully' });
+  } catch (err) {
+    console.error('DB Delete Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // Delete password
 app.delete('/passwords/:id', async (req, res) => {
@@ -156,7 +183,7 @@ app.delete('/passwords/:id', async (req, res) => {
 
   try {
     const result = await pool.query(
-      'DELETE FROM passwords WHERE id = $1 AND firebase_uid = $2', // Add firebase_uid to WHERE clause
+      'DELETE FROM passwords WHERE id = $1 AND firebase_uid = $2',
       [id, firebaseUid]
     );
 
