@@ -3,6 +3,7 @@ import 'package:projects/Model/password.dart';
 import 'package:projects/PasswordField.dart';
 import 'package:projects/services/api_service.dart';
 import 'package:projects/utils/password_generator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EditPasswordPage extends StatefulWidget {
   final Password password;
@@ -57,6 +58,7 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: IconThemeData(color: Colors.black87),
+        actions: [],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -85,6 +87,15 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
                 },
                 icon: Icon(Icons.refresh, size: 16),
                 label: Text("Generate strong password"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Color.fromARGB(255, 55, 114, 255),
+                ),
+              ),
+              const SizedBox(height: 5),
+              TextButton.icon(
+                onPressed: _launchUrl,
+                icon: Icon(Icons.open_in_browser, size: 16),
+                label: Text("Open website"),
                 style: TextButton.styleFrom(
                   foregroundColor: Color.fromARGB(255, 55, 114, 255),
                 ),
@@ -368,4 +379,78 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
     }
   }
 
+  // Fixed function to launch the URL
+  Future<void> _launchUrl() async {
+    try {
+      String url = websiteController.text.trim();
+
+      // Handle empty URL
+      if (url.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a website URL')),
+        );
+        return;
+      }
+
+      // Clean and format the URL
+      url = _formatUrl(url);
+
+      final Uri uri = Uri.parse(url);
+
+      // Check if URL can be launched
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication, // Force external browser
+        );
+      } else {
+        // Try alternative approach with www prefix
+        final alternativeUrl = _getAlternativeUrl(url);
+        final alternativeUri = Uri.parse(alternativeUrl);
+
+        if (await canLaunchUrl(alternativeUri)) {
+          await launchUrl(
+            alternativeUri,
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          throw Exception('Cannot launch URL');
+        }
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open website. Please check the URL format.'),
+        ),
+      );
+    }
+  }
+
+  // Helper function to format URL properly
+  String _formatUrl(String url) {
+    // Remove any whitespace
+    url = url.trim();
+
+    // If it's just a domain name like "instagram.com" or "instagram"
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      // If it doesn't contain a dot, assume it's a major site
+      if (!url.contains('.')) {
+        url = '$url.com';
+      }
+      url = 'https://$url';
+    }
+
+    return url;
+  }
+
+  // Helper function to get alternative URL format
+  String _getAlternativeUrl(String url) {
+    if (url.startsWith('https://') && !url.contains('www.')) {
+      return url.replaceFirst('https://', 'https://www.');
+    } else if (url.startsWith('https://www.')) {
+      return url.replaceFirst('https://www.', 'https://');
+    }
+    return url;
+  }
 }

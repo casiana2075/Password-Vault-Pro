@@ -10,8 +10,6 @@ import 'package:projects/CreditCardsPage.dart'; // Import CreditCardsPage
 import 'package:projects/AddCreditCardModal.dart'; // Import the new credit card modal
 import 'package:projects/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:google_sign_in/google_sign_in.dart';
 
 
@@ -867,10 +865,6 @@ class _HomePageState extends State<HomePage> {
       // Delete Firebase account
       await user.delete();
 
-      // Clear shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-
       // Sign out/disconnect from Google if needed
       try {
         final googleSignIn = GoogleSignIn();
@@ -1027,10 +1021,6 @@ class _HomePageState extends State<HomePage> {
 
       // google SignOut
       await GoogleSignIn().signOut();
-
-      // clear shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
 
       // navigate to login page
       if (context.mounted) {
