@@ -1,3 +1,4 @@
+// HomePage.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -11,6 +12,7 @@ import 'package:projects/AddCreditCardModal.dart'; // Import the new credit card
 import 'package:projects/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:math'; // Import dart:math for min function
 
 
 class HomePage extends StatefulWidget {
@@ -920,8 +922,10 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               child: AddModal(
-                onAdded: () async {
+                onAdded: (Password newPassword) async { // Modified to accept newPassword
                   await loadPasswords(); //re-fetch data from the DB
+                  // Now, check for confusable domains with the new password
+                  _checkForConfusableDomains(newPassword);
                 },
               ),
             ),
@@ -966,6 +970,132 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // New method to check for confusable domains after adding a new password
+  void _checkForConfusableDomains(Password newPassword) {
+    const int levenshteinThreshold = 2; // Same threshold as in SecurityRecomPage
+
+    final String newNormalizedSite = _normalizeDomain(newPassword.site);
+
+    List<Password> confusableSites = [];
+
+    for (var existingPassword in _allPasswords) {
+      // Exclude the newly added password itself from comparison
+      if (existingPassword.id == newPassword.id) {
+        continue;
+      }
+
+      final String existingNormalizedSite = _normalizeDomain(existingPassword.site);
+
+      if (newNormalizedSite == existingNormalizedSite) {
+        continue; // These are effectively the same domain, not "confusable"
+      }
+
+      final distance = _levenshteinDistance(newNormalizedSite, existingNormalizedSite);
+
+      if (distance > 0 && distance <= levenshteinThreshold) {
+        confusableSites.add(existingPassword);
+      }
+    }
+
+    if (confusableSites.isNotEmpty) {
+      _showConfusableDomainWarning(newPassword.site, confusableSites.map((p) => p.site).toList());
+    }
+  }
+
+  void _showConfusableDomainWarning(String newSite, List<String> similarSites) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("⚠️ Potential Phishing Risk!"),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text("The site '${newSite}' you just added seems very similar to existing sites in your vault:"),
+                const SizedBox(height: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: similarSites.map((site) => Text("- $site")).toList(),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "This could indicate a typo or a potential phishing attempt. Please double-check the domain to ensure it's legitimate.",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("Understand"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper function for Levenshtein Distance (copied from SecurityRecomPage.dart)
+  int _levenshteinDistance(String s1, String s2) {
+    s1 = s1.toLowerCase();
+    s2 = s2.toLowerCase();
+
+    final m = s1.length;
+    final n = s2.length;
+    final dp = List.generate(m + 1, (i) => List.filled(n + 1, 0));
+
+    for (int i = 0; i <= m; i++) {
+      dp[i][0] = i;
+    }
+    for (int j = 0; j <= n; j++) {
+      dp[0][j] = j;
+    }
+
+    for (int i = 1; i <= m; i++) {
+      for (int j = 1; j <= n; j++) {
+        final cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
+        dp[i][j] = min(
+          dp[i - 1][j] + 1,      // Deletion
+          min(
+              dp[i][j - 1] + 1,    // Insertion
+              dp[i - 1][j - 1] + cost // Substitution
+          ),
+        );
+      }
+    }
+    return dp[m][n];
+  }
+
+  // Helper function to normalize domain names for comparison (copied from SecurityRecomPage.dart)
+  String _normalizeDomain(String site) {
+    try {
+      Uri uri;
+      // Attempt to prepend a scheme if missing, for reliable Uri parsing
+      if (!site.startsWith('http://') && !site.startsWith('https://')) {
+        uri = Uri.parse('https://$site'); // Use https as a default for parsing
+      } else {
+        uri = Uri.parse(site);
+      }
+
+      String host = uri.host;
+
+      // Remove 'www.' prefix
+      if (host.startsWith('www.')) {
+        host = host.substring(4);
+      }
+      // Convert to lowercase
+      return host.toLowerCase();
+    } catch (e) {
+      // Fallback: if parsing fails (e.g., 'site' is not a valid URL-like string),
+      // just return the lowercase version of the original string.
+      // This is less robust but prevents crashes for malformed 'site' entries.
+      print("Warning: Could not fully normalize site '$site'. Error: $e");
+      return site.toLowerCase();
+    }
+  }
 
   Future<void> loadPasswords() async {
     try {
@@ -1016,24 +1146,30 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> logout() async {
     try {
-      // firebase logout
+      // Store the navigator reference before async operations
+      final navigator = Navigator.of(context);
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+      // Firebase logout
       await FirebaseAuth.instance.signOut();
 
-      // google SignOut
+      // Google SignOut
       await GoogleSignIn().signOut();
 
-      // navigate to login page
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
+      // Check if widget is still mounted before navigation
+      if (mounted) {
+        navigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => LoginPage()),
               (Route<dynamic> route) => false,
         );
       }
     } catch (e) {
       print("Logout error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Logout failed: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Logout failed: ${e.toString()}")),
+        );
+      }
     }
   }
 

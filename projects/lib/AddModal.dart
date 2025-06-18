@@ -1,13 +1,15 @@
+// AddModal.dart
 import 'package:flutter/material.dart';
 import 'package:projects/services/api_service.dart';
 import 'package:projects/utils/authenticateUserBiometrically.dart';
 import 'package:projects/utils/password_strength_analyzer.dart';
 import 'PasswordField.dart';
 import 'package:projects/utils/password_generator.dart';
+import 'package:projects/Model/password.dart'; // Import the Password model
 
 
 class AddModal extends StatefulWidget {
-  final Function onAdded; // callback to reload list from parent
+  final Function(Password) onAdded; // Modified: callback to reload list from parent, now accepts a Password object
 
   const AddModal({super.key, required this.onAdded});
 
@@ -68,8 +70,8 @@ class _AddModalState extends State<AddModal> {
           SizedBox(
             height: 20,
           ),
-        Align(
-          alignment: Alignment.center,
+          Align(
+            alignment: Alignment.center,
             child: Text(
               "Add Password",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w400),
@@ -217,7 +219,17 @@ class _AddModalState extends State<AddModal> {
                   final result = await ApiService.addPassword(site, username, password, logoUrl);
 
                   if (result != null && mounted) {
-                    widget.onAdded();
+                    // Create a Password object to pass back
+                    final newPassword = Password(
+                      id: result.id, // Assuming result contains the ID of the new password
+                      site: site,
+                      username: username,
+                      password: password,
+                      logoUrl: logoUrl,
+                      isPwned: false, // Default to false, will be checked later
+                      pwnCount: 0,    // Default to 0
+                    );
+                    widget.onAdded(newPassword); // Pass the new Password object
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Password added successfully")),
@@ -230,11 +242,11 @@ class _AddModalState extends State<AddModal> {
                 }
                 ,
                 child: Text(
-                    "Done",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                  )
-                ),
-           ),
+                  "Done",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                )
+            ),
+          ),
           SizedBox(
             height: 30,
           ),
@@ -250,28 +262,28 @@ class _AddModalState extends State<AddModal> {
         controller: _usernameController,
         maxLength: 30,
         decoration: InputDecoration(
-          counterText: "",
-          prefixIcon: Padding(
-            padding: EdgeInsets.fromLTRB(
-                20, 5, 5, 5), // add padding to adjust icon
-            child: Icon(
-              icon,
-              color: Color.fromARGB(255, 82, 101, 120),
-            ),
-          ),
-          filled: true,
-          contentPadding: EdgeInsets.all(16),
-          hintText: hintText,
-          hintStyle: TextStyle(
-              color: Color.fromARGB(255, 82, 101, 120), fontWeight: FontWeight.w500),
-          fillColor: Color.fromARGB(247, 232, 235, 237),
-          border: OutlineInputBorder(
-              borderSide: BorderSide(
-                width: 0,
-                style: BorderStyle.none,
+            counterText: "",
+            prefixIcon: Padding(
+              padding: EdgeInsets.fromLTRB(
+                  20, 5, 5, 5), // add padding to adjust icon
+              child: Icon(
+                icon,
+                color: Color.fromARGB(255, 82, 101, 120),
               ),
-              borderRadius: BorderRadius.circular(35))),
-         style: TextStyle(),
+            ),
+            filled: true,
+            contentPadding: EdgeInsets.all(16),
+            hintText: hintText,
+            hintStyle: TextStyle(
+                color: Color.fromARGB(255, 82, 101, 120), fontWeight: FontWeight.w500),
+            fillColor: Color.fromARGB(247, 232, 235, 237),
+            border: OutlineInputBorder(
+                borderSide: BorderSide(
+                  width: 0,
+                  style: BorderStyle.none,
+                ),
+                borderRadius: BorderRadius.circular(35))),
+        style: TextStyle(),
       ),
     );
   }

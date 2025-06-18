@@ -63,7 +63,7 @@ app.get('/passwords', async (req, res) => {
       let decryptedPw = '';
       if (row.password) {
         try {
-          decryptedPw = EncryptionHelper.decryptText(row.password, aesKey, req.firebaseUid);
+          decryptedPw = EncryptionHelper.decryptTextGCM(row.password, aesKey, req.firebaseUid);
         } catch (e) {
           console.warn('Decryption failed, possible legacy format for row ID:', row.id, e.message);
           decryptedPw = ''; // Fallback to empty string or handle legacy differently
@@ -84,7 +84,7 @@ app.post('/passwords', async (req, res) => {
   const { site, username, password: rawPassword, logoUrl } = req.body;
   try {
     const aesKey = await getUserAESKey(req.firebaseUid); // Get the user's AES key from Firestore
-    const encryptedPassword = EncryptionHelper.encryptText(rawPassword, aesKey, req.firebaseUid); // Encrypt on backend
+    const encryptedPassword = EncryptionHelper.encryptTextGCM(rawPassword, aesKey, req.firebaseUid); // Encrypt on backend
 
     const result = await pool.query(
       'INSERT INTO passwords (site, username, password, logourl, firebase_uid) VALUES ($1, $2, $3, $4, $5) RETURNING *',
@@ -103,7 +103,7 @@ app.put('/passwords/:id', async (req, res) => {
   const { site, username, password: newRawPassword, logoUrl } = req.body;
   try {
     const aesKey = await getUserAESKey(req.firebaseUid); // Get the user's AES key from Firestore
-    const encryptedPassword = EncryptionHelper.encryptText(newRawPassword, aesKey, req.firebaseUid); // Encrypt on backend
+    const encryptedPassword = EncryptionHelper.encryptTextGCM(newRawPassword, aesKey, req.firebaseUid); // Encrypt on backend
 
     const result = await pool.query(
       'UPDATE passwords SET site = $1, username = $2, password = $3, logourl = $4 WHERE id = $5 AND firebase_uid = $6 RETURNING *',
@@ -218,12 +218,12 @@ app.get('/credit_cards', async (req, res) => {
       try {
         return {
           id: card.id,
-          card_holder_name: EncryptionHelper.decryptText(card.card_holder_name_encrypted, userAESKey, firebaseUid),
-          card_number: EncryptionHelper.decryptText(card.card_number_encrypted, userAESKey, firebaseUid),
-          expiry_date: EncryptionHelper.decryptText(card.expiry_date_encrypted, userAESKey, firebaseUid),
-          cvv: EncryptionHelper.decryptText(card.cvv_encrypted, userAESKey, firebaseUid),
-          notes: card.notes_encrypted ? EncryptionHelper.decryptText(card.notes_encrypted, userAESKey, firebaseUid) : null,
-          type: card.type_encrypted ? EncryptionHelper.decryptText(card.type_encrypted, userAESKey, firebaseUid) : null,
+          card_holder_name: EncryptionHelper.decryptTextGCM(card.card_holder_name_encrypted, userAESKey, firebaseUid),
+          card_number: EncryptionHelper.decryptTextGCM(card.card_number_encrypted, userAESKey, firebaseUid),
+          expiry_date: EncryptionHelper.decryptTextGCM(card.expiry_date_encrypted, userAESKey, firebaseUid),
+          cvv: EncryptionHelper.decryptTextGCM(card.cvv_encrypted, userAESKey, firebaseUid),
+          notes: card.notes_encrypted ? EncryptionHelper.decryptTextGCM(card.notes_encrypted, userAESKey, firebaseUid) : null,
+          type: card.type_encrypted ? EncryptionHelper.decryptTextGCM(card.type_encrypted, userAESKey, firebaseUid) : null,
         };
       } catch (decryptError) {
         console.error('Decryption error for card ID:', card.id, decryptError);
@@ -255,12 +255,12 @@ app.post('/credit_cards', async (req, res) => {
     }
     const userAESKey = userAESKeyDoc.data().aesKey;
 
-    const encryptedCardHolderName = EncryptionHelper.encryptText(card_holder_name, userAESKey, firebaseUid);
-    const encryptedCardNumber = EncryptionHelper.encryptText(card_number, userAESKey, firebaseUid);
-    const encryptedExpiryDate = EncryptionHelper.encryptText(expiry_date, userAESKey, firebaseUid);
-    const encryptedCvv = EncryptionHelper.encryptText(cvv, userAESKey, firebaseUid);
-    const encryptedNotes = notes ? EncryptionHelper.encryptText(notes, userAESKey, firebaseUid) : null;
-    const encryptedType = type ? EncryptionHelper.encryptText(type, userAESKey, firebaseUid) : null;
+    const encryptedCardHolderName = EncryptionHelper.encryptTextGCM(card_holder_name, userAESKey, firebaseUid);
+    const encryptedCardNumber = EncryptionHelper.encryptTextGCM(card_number, userAESKey, firebaseUid);
+    const encryptedExpiryDate = EncryptionHelper.encryptTextGCM(expiry_date, userAESKey, firebaseUid);
+    const encryptedCvv = EncryptionHelper.encryptTextGCM(cvv, userAESKey, firebaseUid);
+    const encryptedNotes = notes ? EncryptionHelper.encryptTextGCM(notes, userAESKey, firebaseUid) : null;
+    const encryptedType = type ? EncryptionHelper.encryptTextGCM(type, userAESKey, firebaseUid) : null;
 
 
     const result = await pool.query(
@@ -292,12 +292,12 @@ app.put('/credit_cards/:id', async (req, res) => {
     }
     const userAESKey = userAESKeyDoc.data().aesKey;
 
-    const encryptedCardHolderName = EncryptionHelper.encryptText(card_holder_name, userAESKey, firebaseUid);
-    const encryptedCardNumber = EncryptionHelper.encryptText(card_number, userAESKey, firebaseUid);
-    const encryptedExpiryDate = EncryptionHelper.encryptText(expiry_date, userAESKey, firebaseUid);
-    const encryptedCvv = EncryptionHelper.encryptText(cvv, userAESKey, firebaseUid);
-    const encryptedNotes = notes ? EncryptionHelper.encryptText(notes, userAESKey, firebaseUid) : null;
-    const encryptedType = type ? EncryptionHelper.encryptText(type, userAESKey, firebaseUid) : null;
+    const encryptedCardHolderName = EncryptionHelper.encryptTextGCM(card_holder_name, userAESKey, firebaseUid);
+    const encryptedCardNumber = EncryptionHelper.encryptTextGCM(card_number, userAESKey, firebaseUid);
+    const encryptedExpiryDate = EncryptionHelper.encryptTextGCM(expiry_date, userAESKey, firebaseUid);
+    const encryptedCvv = EncryptionHelper.encryptTextGCM(cvv, userAESKey, firebaseUid);
+    const encryptedNotes = notes ? EncryptionHelper.encryptTextGCM(notes, userAESKey, firebaseUid) : null;
+    const encryptedType = type ? EncryptionHelper.encryptTextGCM(type, userAESKey, firebaseUid) : null;
 
 
     const result = await pool.query(
@@ -315,12 +315,12 @@ app.put('/credit_cards/:id', async (req, res) => {
     const updatedCard = result.rows[0];
     const decryptedUpdatedCard = {
       id: updatedCard.id,
-      card_holder_name: EncryptionHelper.decryptText(updatedCard.card_holder_name_encrypted, userAESKey, firebaseUid),
-      card_number: EncryptionHelper.decryptText(updatedCard.card_number_encrypted, userAESKey, firebaseUid),
-      expiry_date: EncryptionHelper.decryptText(updatedCard.expiry_date_encrypted, userAESKey, firebaseUid),
-      cvv: EncryptionHelper.decryptText(updatedCard.cvv_encrypted, userAESKey, firebaseUid),
-      notes: updatedCard.notes_encrypted ? EncryptionHelper.decryptText(updatedCard.notes_encrypted, userAESKey, firebaseUid) : null,
-      type: updatedCard.type_encrypted ? EncryptionHelper.decryptText(updatedCard.type_encrypted, userAESKey, firebaseUid) : null,
+      card_holder_name: EncryptionHelper.decryptTextGCM(updatedCard.card_holder_name_encrypted, userAESKey, firebaseUid),
+      card_number: EncryptionHelper.decryptTextGCM(updatedCard.card_number_encrypted, userAESKey, firebaseUid),
+      expiry_date: EncryptionHelper.decryptTextGCM(updatedCard.expiry_date_encrypted, userAESKey, firebaseUid),
+      cvv: EncryptionHelper.decryptTextGCM(updatedCard.cvv_encrypted, userAESKey, firebaseUid),
+      notes: updatedCard.notes_encrypted ? EncryptionHelper.decryptTextGCM(updatedCard.notes_encrypted, userAESKey, firebaseUid) : null,
+      type: updatedCard.type_encrypted ? EncryptionHelper.decryptTextGCM(updatedCard.type_encrypted, userAESKey, firebaseUid) : null,
     };
     res.json(decryptedUpdatedCard);
   } catch (err) {
