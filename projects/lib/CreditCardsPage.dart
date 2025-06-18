@@ -380,7 +380,9 @@ class _CreditCardsPageState extends State<CreditCardsPage> {
             ),
           );
         },
-        child: const Icon(Icons.add),
+        backgroundColor: const Color.fromARGB(255, 55, 114, 255),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add_outlined)
       ),
     );
   }

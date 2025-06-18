@@ -5,14 +5,16 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:projects/AddModal.dart';
 import 'package:projects/Model/password.dart';
 import 'package:projects/SecurityRecomPage.dart';
+import 'package:projects/ChatBotPage.dart';
 import 'package:projects/EditPasswordPage.dart';
 import 'package:projects/LoginPage.dart';
-import 'package:projects/CreditCardsPage.dart'; // Import CreditCardsPage
-import 'package:projects/AddCreditCardModal.dart'; // Import the new credit card modal
+import 'package:projects/CreditCardsPage.dart';
+import 'package:projects/AddCreditCardModal.dart';
 import 'package:projects/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'dart:math'; // Import dart:math for min function
+import 'dart:math';
+
 
 
 class HomePage extends StatefulWidget {
@@ -135,7 +137,7 @@ class _HomePageState extends State<HomePage> {
                     ))
                         : ListView.builder(
                       shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(), // optional
+                      physics: NeverScrollableScrollPhysics(),
                       itemCount: _filteredPasswords.length,
                       itemBuilder: (context, index) {
                         final password = _filteredPasswords[index];
@@ -182,6 +184,21 @@ class _HomePageState extends State<HomePage> {
           selectedItemColor: Theme.of(context).primaryColor,
           onTap: _onItemTapped,
         ),
+        floatingActionButton: _selectedIndex == 0 // Only show on Passwords tab
+            ? FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ChatBotPage()),
+            );
+          },
+          heroTag: 'chatBotBtn', // Unique tag for this FAB
+          backgroundColor: Color.fromARGB(255, 55, 114, 255),
+          foregroundColor: Colors.white,
+          child: const Icon(Icons.mark_unread_chat_alt_rounded), // Chat icon
+        )
+            : null, // Hide FAB on other tabs
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
