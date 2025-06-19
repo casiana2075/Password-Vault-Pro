@@ -1,4 +1,3 @@
-// HomePage.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -10,11 +9,11 @@ import 'package:projects/EditPasswordPage.dart';
 import 'package:projects/LoginPage.dart';
 import 'package:projects/CreditCardsPage.dart';
 import 'package:projects/AddCreditCardModal.dart';
+import 'package:projects/ChatStorageService.dart';
 import 'package:projects/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:math';
-
 
 
 class HomePage extends StatefulWidget {
@@ -1166,6 +1165,9 @@ class _HomePageState extends State<HomePage> {
       // Store the navigator reference before async operations
       final navigator = Navigator.of(context);
       final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+      // Clear chat history before logout
+      ChatStorageService().clearChat();
 
       // Firebase logout
       await FirebaseAuth.instance.signOut();

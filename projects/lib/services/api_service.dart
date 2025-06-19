@@ -9,6 +9,8 @@ import 'package:crypto/crypto.dart';
 
 class ApiService {
   static const String baseUrl = 'https://10.0.2.2:3001'; // HTTPS for emulator
+  //static const String baseUrl = 'https://192.168.0.108:3001'; // HTTPS for device
+
 
   // Create a custom HTTP client that allows self-signed certificates
   static final http.Client _client = () {
