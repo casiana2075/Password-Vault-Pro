@@ -44,7 +44,6 @@ dependencies:
   url_launcher: ^6.3.1
   flutter_gemini: ^3.0.0
   flutter_dotenv: ^5.2.1
-  shared_preferences: ^2.5.3
 
   http: any
 dev_dependencies:

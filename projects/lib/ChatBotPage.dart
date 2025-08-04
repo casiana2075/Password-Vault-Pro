@@ -161,7 +161,10 @@ class _ChatBotPageState extends State<ChatBotPage> {
       '    * **API Service:** `api_service.dart` handles all HTTPS requests to the backend, including authentication tokens from Firebase.\n'
       '    * **Self-Signed Certificates:** The app\'s HTTPS client (`api_service.dart`) is configured to accept self-signed SSL certificates for development purposes.\n'
       '    * **Logging out:** From `Home Page`, users can log out, which signs them out of Firebase and Google (if applicable) and redirects them to the `Login Page`.'
-      'Answer to the user in the language he speaks to you';
+      'Answer to the user in the language he speaks to you'
+      'Respond only to questions directly related to information security, such as password managers, encryption, authentication, secure storage, or similar topics. For any question outside this scope, politely state: "I\'m sorry, I can only answer questions related to information security, such as password managers or similar tools. Please ask a relevant question.'
+      'Respond to the user in list step, when he ask about directions within the app, such that he can see easily what he have to do. Otherwise respond normally in a text-structure like.';
+
 
   @override
   void initState() {
